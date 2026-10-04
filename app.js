@@ -64,6 +64,8 @@ async function igTab() {
 
 async function fromIg(kind, known, maxPages) {
   const [{ result }] = await chrome.scripting.executeScript({ target: { tabId: await igTab() }, func: igFetch, args: [kind, known, maxPages] });
+  // Chrome has no InjectionResult.error: if igFetch throws, result is just null.
+  if (!result) throw new Error(t('igFailed'));
   if (result.error) throw new Error(result.error === 'not_logged_in' ? t('loginFirst') : result.error);
   return result.items;
 }
