@@ -30,6 +30,7 @@
   "save": { "message": "Save" },
   "saved": { "message": "Saved." },
   "recategorize": { "message": "Re-sort everything" },
+  "confirmResort": { "message": "Re-sort everything? All topics and digests are rebuilt; this uses many Gemini calls." },
   "clearData": { "message": "Delete all data" },
   "confirmClear": { "message": "Delete all synced lists and digests? Settings are kept." },
   "lastSync": { "message": "Last sync — saved: $1 · following: $2" },

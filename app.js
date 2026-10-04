@@ -243,7 +243,7 @@ function renderSettings(main) {
     el('hr'),
     el('button', {
       textContent: t('recategorize'),
-      onclick: () => run(async () => {
+      onclick: () => confirm(t('confirmResort')) && run(async () => {
         for (const x of [...db.following, ...db.saved]) delete x.cat;
         db.summaries = {};
         await save();

@@ -30,6 +30,7 @@
   "save": { "message": "儲存" },
   "saved": { "message": "已儲存。" },
   "recategorize": { "message": "全部重新分類" },
+  "confirmResort": { "message": "確定全部重新分類？所有分類和摘要都會刪掉重做，會用掉不少 Gemini 額度。" },
   "clearData": { "message": "刪除所有資料" },
   "confirmClear": { "message": "確定刪除所有同步的清單和摘要？設定會保留。" },
   "lastSync": { "message": "上次同步：收藏 $1 · 追蹤 $2" },
