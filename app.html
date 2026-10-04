@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>IG Sorter</title>
 <style>
-  :root { --bg: #fff; --fg: #1a1a1a; --muted: #6b6b6b; --line: #e4e4e4; --chip: #f2f2f2; --accent: #c13584; }
+  /* --accent is link text; --sel is the selected-button fill under white text (7.3:1 in both modes). */
+  :root { --bg: #fff; --fg: #1a1a1a; --muted: #6b6b6b; --line: #e4e4e4; --chip: #f2f2f2; --accent: #c13584; --sel: #c13584; --danger: #c62828; }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #161616; --fg: #ececec; --muted: #9a9a9a; --line: #2e2e2e; --chip: #242424; --accent: #f06bb0; }
+    :root { --bg: #161616; --fg: #ececec; --muted: #9a9a9a; --line: #2e2e2e; --chip: #242424; --accent: #f06bb0; --danger: #ff7b7b; }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, "Noto Sans TC", sans-serif; }
@@ -20,8 +21,8 @@
   #status { color: var(--muted); font-size: 13px; padding-bottom: 0; min-height: 1.5em; }
   button { font: inherit; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--chip); color: var(--fg); cursor: pointer; }
   button:disabled, body.busy main button { opacity: .5; cursor: default; pointer-events: none; }
-  button.on, .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.danger { color: #d33; }
+  button.on, .chip.on { background: var(--sel); border-color: var(--sel); color: #fff; }
+  button.danger { color: var(--danger); }
   input, select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); width: 100%; }
   #search { margin-top: 10px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
