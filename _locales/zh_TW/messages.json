@@ -18,6 +18,7 @@
   "error": { "message": "錯誤：$1" },
   "loginFirst": { "message": "請先在這個瀏覽器登入 instagram.com。" },
   "igFailed": { "message": "讀不到 Instagram。重新整理 instagram.com 分頁後再同步。" },
+  "followingShrank": { "message": "追蹤名單只抓到 $1 / $2 個帳號，先保留舊名單。稍後再同步。" },
   "needKey": { "message": "已同步。到「設定」填 Gemini API key 才能分類。" },
   "makeSummary": { "message": "產生摘要" },
   "updateSummary": { "message": "有 $1 則新收藏 · 更新摘要" },

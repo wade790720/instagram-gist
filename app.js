@@ -107,16 +107,20 @@ async function run(fn) {
 
 const sync = force => run(async () => {
   status(t('syncingSaved'));
-  // ponytail: 50 pages caps the first import (~1000+ posts); later syncs stop at the first known post.
+  // ponytail: 50 pages caps the first import (~1000 posts) for good: later syncs stop at the
+  // first known post, so older posts are never reached. Store next_max_id to resume if needed.
   const saved = await fromIg('saved', db.saved.map(x => x.id), 50);
   db.saved = Core.mergeById(saved.map(Core.slimPost), db.saved);
   db.lastSync.saved = Date.now();
+  await save(); // keep saved progress even if the following fetch below fails
 
   // Following has no "newest first" order, so it is a full refetch, at most once a day.
   if (force || Date.now() - (db.lastSync.following || 0) > DAY) {
     status(t('syncingFollowing'));
     // ponytail: 40 pages x 50 = 2000 accounts max; raise if someone follows more.
     const following = await fromIg('following', [], 40);
+    // Less than half the stored list usually means IG cut paging short, not a mass unfollow.
+    if (following.length < db.following.length / 2) throw new Error(t('followingShrank', following.length, db.following.length));
     db.following = Core.keepCats(following.map(Core.slimUser), db.following);
     db.lastSync.following = Date.now();
   }

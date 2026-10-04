@@ -18,6 +18,7 @@
   "error": { "message": "Error: $1" },
   "loginFirst": { "message": "Log in to instagram.com in this browser first." },
   "igFailed": { "message": "Could not read Instagram. Reload the instagram.com tab and sync again." },
+  "followingShrank": { "message": "Got only $1 of $2 followed accounts, so the old list was kept. Sync again later." },
   "needKey": { "message": "Synced. Add a Gemini API key in Settings to sort into topics." },
   "makeSummary": { "message": "Make digest" },
   "updateSummary": { "message": "$1 new posts · Update digest" },
