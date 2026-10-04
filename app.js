@@ -138,6 +138,8 @@ const summarize = cat => run(async () => {
   status(t('summarizing'));
   const posts = db.saved.filter(x => x.cat === cat);
   const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang), false);
+  // A blocked prompt returns no text; saving it would wipe the old digest and mark it up to date.
+  if (!text.trim()) throw new Error('Gemini: empty response');
   db.summaries[cat] = { text, sourceIds: posts.map(p => p.id), at: Date.now() };
   await save();
   status('');
