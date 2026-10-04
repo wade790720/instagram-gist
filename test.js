@@ -10,6 +10,10 @@ const post = C.slimPost({
 });
 assert.deepEqual(post, { id: '123', code: 'Abc', user: 'hairbykai', caption: '', alt: 'text: 剪髮步驟 | text: 吹整', type: 'carousel', takenAt: 1700000000 });
 
+// Big media ids come from the string `id`, not the lossy numeric pk.
+assert.equal(C.slimPost({ id: '3456789012345678901_42', pk: 3456789012345678901, code: 'X' }).id, '3456789012345678901');
+assert.equal(C.slimUser({ pk: 42, username: 'a' }).id, '42');
+
 // keepCats: unfollowed accounts disappear, surviving ones keep their tag.
 const old = [{ id: '1', cat: '美髮' }, { id: '2', cat: '滑雪' }];
 assert.deepEqual(C.keepCats([{ id: '1' }, { id: '3' }], old), [{ id: '1', cat: '美髮' }, { id: '3' }]);

@@ -43,7 +43,7 @@ async function igFetch(kind, known, maxPages) {
     if (!r.ok) return { error: 'HTTP ' + r.status, items };
     const j = await r.json();
     const batch = kind === 'following' ? j.users || [] : (j.items || []).map(i => i.media).filter(Boolean);
-    const stop = batch.findIndex(x => seen.has(String(x.pk)));
+    const stop = batch.findIndex(x => seen.has(String(x.id ?? x.pk).split('_')[0])); // same rule as Core.idOf
     items.push(...(stop < 0 ? batch : batch.slice(0, stop)));
     maxId = j.next_max_id;
     if (stop >= 0 || !maxId) break;

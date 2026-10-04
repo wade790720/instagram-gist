@@ -6,12 +6,15 @@ const Core = (() => {
     en: { name: 'English', other: 'Other', eg: 'Hair, Marketing, Skiing, Food, Humor' },
   };
   const clip = (s, n) => (s.length > n ? s.slice(0, n) + '…' : s);
+  // Media pk (~3e18) is above 2^53 and loses digits as a JSON number; the string `id`
+  // ("<pk>_<owner>") does not. igFetch in app.js must use the same rule.
+  const idOf = x => String(x.id ?? x.pk).split('_')[0];
 
   // IG's alt text ("May be an image of text that says ...") is free OCR for carousels.
   function slimPost(m) {
     const alts = [m.accessibility_caption, ...(m.carousel_media || []).map(c => c.accessibility_caption)].filter(Boolean);
     return {
-      id: String(m.pk),
+      id: idOf(m),
       code: m.code,
       user: m.user?.username || '',
       caption: m.caption?.text || '',
@@ -21,7 +24,7 @@ const Core = (() => {
     };
   }
 
-  const slimUser = u => ({ id: String(u.pk), username: u.username, name: u.full_name || '' });
+  const slimUser = u => ({ id: idOf(u), username: u.username, name: u.full_name || '' });
 
   // Full refetch (following): drop accounts no longer present, keep old category tags.
   function keepCats(fresh, old) {
