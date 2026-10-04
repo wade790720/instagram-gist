@@ -28,7 +28,8 @@ async function igFetch(kind, known, maxPages) {
   let uid = cookie('ds_user_id');
   if (!uid) {
     const r = await fetch('/api/v1/accounts/current_user/?edit=true', { headers });
-    uid = r.ok ? (await r.json()).user?.pk : null;
+    // Logged out, IG can answer with the HTML login page instead of JSON.
+    uid = r.ok ? (await r.json().catch(() => ({}))).user?.pk : null;
   }
   if (!uid) return { error: 'not_logged_in', items: [] };
 
