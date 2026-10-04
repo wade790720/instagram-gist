@@ -70,7 +70,7 @@ async function fromIg(kind, known, maxPages) {
   const tab = await igTab();
   // Close the tab only if we opened it; never touch the user's own IG tab.
   const [{ result }] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: igFetch, args: [kind, known, maxPages] })
-    .finally(() => tab.created && chrome.tabs.remove(tab.id));
+    .finally(() => tab.created && chrome.tabs.remove(tab.id).catch(() => {})); // user may have closed it
   // Chrome has no InjectionResult.error: if igFetch throws, result is just null.
   if (!result) throw new Error(t('igFailed'));
   if (result.error) throw new Error(result.error === 'not_logged_in' ? t('loginFirst') : result.error);
@@ -120,7 +120,8 @@ const sync = force => run(async () => {
     // ponytail: 40 pages x 50 = 2000 accounts max; raise if someone follows more.
     const following = await fromIg('following', [], 40);
     // Less than half the stored list usually means IG cut paging short, not a mass unfollow.
-    if (following.length < db.following.length / 2) throw new Error(t('followingShrank', following.length, db.following.length));
+    // Auto-sync refuses it; pressing Sync (force) accepts it, so a real mass unfollow is not stuck.
+    if (!force && following.length < db.following.length / 2) throw new Error(t('followingShrank', following.length, db.following.length));
     db.following = Core.keepCats(following.map(Core.slimUser), db.following);
     db.lastSync.following = Date.now();
   }
