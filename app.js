@@ -90,12 +90,13 @@ async function gemini(prompt, json) {
 
 // ---------- Actions ----------
 
+// One action at a time. body.busy greys out every button so ignored clicks are visible.
 async function run(fn) {
   if (busy) return;
-  busy = true;
-  $('#sync').disabled = true;
+  const setBusy = on => { busy = on; $('#sync').disabled = on; document.body.classList.toggle('busy', on); };
+  setBusy(true);
   try { await fn(); } catch (e) { status(t('error', e.message)); }
-  finally { busy = false; $('#sync').disabled = false; render(); }
+  finally { setBusy(false); render(); }
 }
 
 const sync = force => run(async () => {

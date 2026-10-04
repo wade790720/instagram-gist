@@ -19,7 +19,7 @@
   main, #status { max-width: 820px; margin: 0 auto; padding: 12px 16px; }
   #status { color: var(--muted); font-size: 13px; padding-bottom: 0; min-height: 1.5em; }
   button { font: inherit; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--chip); color: var(--fg); cursor: pointer; }
-  button:disabled { opacity: .5; cursor: default; }
+  button:disabled, body.busy main button { opacity: .5; cursor: default; pointer-events: none; }
   button.on, .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   button.danger { color: #d33; }
   input, select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); width: 100%; }
