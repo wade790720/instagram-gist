@@ -53,18 +53,24 @@ async function igFetch(kind, known, maxPages) {
   return { items };
 }
 
+// Returns { id, created }. A discarded (sleeping) tab never reaches 'complete', so reload it first.
 async function igTab() {
   let [tab] = await chrome.tabs.query({ url: 'https://www.instagram.com/*' });
-  if (!tab) tab = await chrome.tabs.create({ url: 'https://www.instagram.com/', active: false });
-  for (let i = 0; i < 60 && tab.status !== 'complete'; i++) {
+  const created = !tab;
+  if (created) tab = await chrome.tabs.create({ url: 'https://www.instagram.com/', active: false });
+  else if (tab.discarded) await chrome.tabs.reload(tab.id);
+  for (let i = 0; i < 60 && (tab.status !== 'complete' || tab.discarded); i++) {
     await sleep(500);
     tab = await chrome.tabs.get(tab.id);
   }
-  return tab.id;
+  return { id: tab.id, created };
 }
 
 async function fromIg(kind, known, maxPages) {
-  const [{ result }] = await chrome.scripting.executeScript({ target: { tabId: await igTab() }, func: igFetch, args: [kind, known, maxPages] });
+  const tab = await igTab();
+  // Close the tab only if we opened it; never touch the user's own IG tab.
+  const [{ result }] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: igFetch, args: [kind, known, maxPages] })
+    .finally(() => tab.created && chrome.tabs.remove(tab.id));
   // Chrome has no InjectionResult.error: if igFetch throws, result is just null.
   if (!result) throw new Error(t('igFailed'));
   if (result.error) throw new Error(result.error === 'not_logged_in' ? t('loginFirst') : result.error);
