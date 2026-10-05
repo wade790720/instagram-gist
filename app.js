@@ -147,11 +147,13 @@ const sync = () => run(async () => {
 
 async function categorize() {
   const cats = () => Core.groupCounts([...db.following, ...db.saved]).map(([c]) => c);
-  for (const list of [db.saved, db.following]) {
+  // Following first: it is cheap (only @name + display name, so 200 per call) and a quota
+  // error during saved posts would otherwise leave it untouched. Saved posts carry captions: 80 per call.
+  for (const [list, size] of [[db.following, 200], [db.saved, 80]]) {
     const todo = list.filter(x => !x.cat);
-    for (let i = 0; i < todo.length; i += 80) {
+    for (let i = 0; i < todo.length; i += size) {
       status(t('categorizing', i, todo.length));
-      const batch = todo.slice(i, i + 80);
+      const batch = todo.slice(i, i + size);
       Core.applyCategories(batch, Core.parseJson(await gemini(Core.categorizePrompt(batch, cats(), db.settings.lang), true)));
       await save();
       render();
@@ -212,6 +214,13 @@ function renderList(main) {
   const items = db[view.tab];
   if (!items.length) return main.append(el('p', { className: 'empty', textContent: t('empty') }));
   main.append(el('div', { className: 'chips' }, chip('', t('all'), items.length), ...Core.groupCounts(items).map(([c, n]) => chip(c, c, n))));
+  // Resume sorting without touching IG (Sync would fetch again) after a quota error or a stop.
+  const untagged = items.filter(x => !x.cat).length;
+  if (untagged && db.settings.apiKey) main.append(el('p', {}, el('button', {
+    className: 'act',
+    textContent: t('sortRest', untagged),
+    onclick: () => run(async () => { await categorize(); status(t('sortDone')); }),
+  })));
   if (view.tab === 'saved' && view.cat) main.append(summaryBox(view.cat));
   const shown = items.filter(x => (!view.cat || x.cat === view.cat) && (!view.q || Core.matches(x, view.q)));
   // ponytail: renders at most 500 rows; add paging if lists get bigger.

@@ -13,6 +13,8 @@
   "syncingSaved": { "message": "正在抓收藏…" },
   "syncingFollowing": { "message": "正在抓追蹤名單…" },
   "categorizing": { "message": "正在分類… $1 / $2" },
+  "sortRest": { "message": "還有 $1 筆未分類 · 開始分類" },
+  "sortDone": { "message": "分類完成。" },
   "summarizing": { "message": "正在寫摘要…" },
   "synced": { "message": "已同步（$1）" },
   "error": { "message": "錯誤：$1" },
