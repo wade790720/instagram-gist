@@ -222,24 +222,43 @@ async function categorize() {
   }
 }
 
-// note: an optional rewrite instruction. It is saved, so later updates keep applying it.
-const summarize = (cat, note = '') => run(async () => {
+// A topic holds a list of digests: different angles on the same posts (key points, formulas…).
+// i: which digest; undefined makes the topic's first one.
+// note: an instruction, saved on the digest so later updates keep applying it.
+// asNew: build a new digest from digest i and leave digest i untouched.
+const summarize = (cat, i, note = '', asNew = false) => run(async () => {
   status(t('summarizing'));
-  const old = db.summaries[cat];
-  const notes = [...(old?.notes || []), note.trim()].filter(Boolean);
+  const list = (db.summaries[cat] ||= []);
+  const old = list[i];
+  const notes = asNew ? [note.trim()] : [...(old?.notes || []), note.trim()].filter(Boolean);
   const posts = Core.orderSources(old?.sourceIds || [], db.saved.filter(x => x.cat === cat));
   const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang, notes, old?.text), false, db.settings.summaryModel);
   // A blocked prompt returns no text; saving it would wipe the old digest and mark it up to date.
   if (!text.trim()) throw new Error('Gemini: empty response');
-  // ponytail: one level of undo (prev); keep a list if people want to step back further.
-  const prev = old && { text: old.text, sourceIds: old.sourceIds, notes: old.notes, at: old.at };
-  db.summaries[cat] = { text, sourceIds: posts.map(p => p.id), notes, at: Date.now(), prev };
+  const next = { id: old && !asNew ? old.id : Date.now().toString(36), title: asNew ? note.trim() : old?.title, text, sourceIds: posts.map(p => p.id), notes, at: Date.now() };
+  if (asNew) {
+    list.push(next);
+    opened.add(cat + '#' + next.id); // show the new digest open
+  } else {
+    // ponytail: one level of undo (prev); keep a list if people want to step back further.
+    if (old) { const { prev, ...rest } = old; next.prev = rest; }
+    list[i ?? 0] = next;
+  }
   await save();
   status('');
 });
 
-const undoSummary = async cat => {
-  db.summaries[cat] = db.summaries[cat].prev;
+const undoSummary = async (cat, i) => {
+  const list = db.summaries[cat];
+  list[i] = { ...list[i].prev, id: list[i].id };
+  await save();
+  render();
+};
+
+const deleteDigest = async (cat, i) => {
+  const list = db.summaries[cat];
+  list.splice(i, 1);
+  if (!list.length) delete db.summaries[cat];
   await save();
   render();
 };
@@ -282,14 +301,18 @@ function catPicker(x, cats) {
   return sel;
 }
 
+// Rows: name on the left, topic picker pinned to the right edge, so moving many items
+// keeps the mouse in one column.
 const userRow = (u, cats) => el('li', {},
-  el('a', { href: `https://www.instagram.com/${u.username}/`, target: '_blank', textContent: '@' + u.username }),
-  el('span', { className: 'muted', textContent: ' ' + u.name }),
+  el('div', { className: 'who' },
+    el('a', { href: `https://www.instagram.com/${u.username}/`, target: '_blank', textContent: '@' + u.username }),
+    el('span', { className: 'muted', textContent: ' ' + u.name })),
   catPicker(u, cats));
 
 const postRow = (p, cats) => el('li', {},
-  el('a', { href: postUrl(p), target: '_blank', textContent: '@' + p.user }),
-  el('span', { className: 'tag', textContent: t('type_' + p.type) }),
+  el('div', { className: 'who' },
+    el('a', { href: postUrl(p), target: '_blank', textContent: '@' + p.user }),
+    el('span', { className: 'tag', textContent: t('type_' + p.type) })),
   catPicker(p, cats),
   el('p', { className: 'cap', textContent: (p.caption || p.alt).slice(0, 160) }));
 
@@ -303,7 +326,10 @@ function renderList(main) {
     className: 'act',
     onclick: () => run(async () => { await categorize(); status(t('sortDone')); }),
   }, icon('sparkles'), t('sortRest', untagged))));
-  if (view.tab === 'saved' && view.cat) main.append(summaryBox(view.cat));
+  if (view.tab === 'saved' && view.cat) {
+    const list = db.summaries[view.cat] || [];
+    main.append(...(list.length ? list.map((_, i) => summaryBox(view.cat, i)) : [summaryBox(view.cat)]));
+  }
   const shown = items.filter(x => (!view.cat || x.cat === view.cat) && (!view.q || Core.matches(x, view.q)));
   // ponytail: renders at most 500 rows; add paging if lists get bigger.
   // Topics from both lists, so an account can move into a topic that so far only has posts.
@@ -321,30 +347,38 @@ function digestText(s) {
   }));
 }
 
-function summaryBox(cat) {
-  const s = db.summaries[cat];
+// i: digest index in the topic; undefined = the topic has none yet, show "Make digest".
+function summaryBox(cat, i) {
+  const s = db.summaries[cat]?.[i];
   if (!s) return el('section', { className: 'summary' }, el('button', { className: 'act primary', onclick: () => summarize(cat) }, icon('sparkles'), t('makeSummary')));
+  const key = cat + '#' + s.id;
   const fresh = Core.newSources(s, db.saved.filter(x => x.cat === cat));
   const ask = el('input', { placeholder: t('refinePlaceholder'), ariaLabel: t('refine') });
-  return el('details', { className: 'summary', open: opened.has(cat), ontoggle: e => opened[e.target.open ? 'add' : 'delete'](cat) },
-    el('summary', { textContent: t('digestTitle', cat, s.sourceIds.length) }),
+  const send = asNew => { if (ask.value.trim()) summarize(cat, i, ask.value, asNew); };
+  return el('details', { className: 'summary', open: opened.has(key), ontoggle: e => opened[e.target.open ? 'add' : 'delete'](key) },
+    el('summary', { textContent: s.title ? `${cat} · ${s.title.slice(0, 40)}` : t('digestTitle', cat, s.sourceIds.length) }),
     digestText(s),
     s.notes?.length > 0 && el('p', { className: 'muted', textContent: t('notesApplied', s.notes.join('；')) }),
-    el('form', {
-      className: 'refine',
-      onsubmit: e => { e.preventDefault(); if (ask.value.trim()) summarize(cat, ask.value); },
-    }, ask, el('button', { className: 'act' }, icon('sparkles'), t('refine'))),
+    // Enter = rewrite this digest. "Save as new" keeps this one and adds another built from it.
+    el('form', { className: 'refine', onsubmit: e => { e.preventDefault(); send(false); } },
+      ask,
+      el('button', { className: 'act' }, icon('sparkles'), t('refine')),
+      el('button', { type: 'button', className: 'act', onclick: () => send(true) }, icon('sparkles'), t('saveAsNew'))),
     el('div', { className: 'row' },
       fresh
-        ? el('button', { className: 'act', onclick: () => summarize(cat) }, icon('sparkles'), t('updateSummary', fresh))
+        ? el('button', { className: 'act', onclick: () => summarize(cat, i) }, icon('sparkles'), t('updateSummary', fresh))
         : el('span', { className: 'muted', textContent: t('upToDate') }),
-      s.prev && el('button', { className: 'act', onclick: () => undoSummary(cat) }, icon('undo'), t('undo'))));
+      s.prev && el('button', { className: 'act', onclick: () => undoSummary(cat, i) }, icon('undo'), t('undo')),
+      el('button', {
+        className: 'act danger',
+        onclick: async () => (await modal(t('confirmDeleteDigest'), { ok: t('deleteDigest'), danger: true })) && deleteDigest(cat, i),
+      }, icon('trash'), t('deleteDigest'))));
 }
 
 function renderBookmarks(main) {
-  const cats = Object.keys(db.summaries);
-  if (!cats.length) return main.append(el('p', { className: 'empty', textContent: t('noBookmarks') }));
-  main.append(...cats.map(summaryBox));
+  const boxes = Object.entries(db.summaries).flatMap(([cat, list]) => list.map((_, i) => summaryBox(cat, i)));
+  if (!boxes.length) return main.append(el('p', { className: 'empty', textContent: t('noBookmarks') }));
+  main.append(...boxes);
 }
 
 function renderSettings(main) {
@@ -404,6 +438,7 @@ function renderSettings(main) {
   // Settings saved before summaryModel existed used 3.8-flash for sorting too; move sorting to lite once.
   if (db.settings?.model && !db.settings.summaryModel && db.settings.model === 'gemini-3.8-flash') db.settings.model = DEFAULTS.model;
   db.settings = { ...DEFAULTS, ...db.settings };
+  db.summaries = Core.normalizeSummaries(db.summaries);
   // gemini-2.x returns 404 for keys created after 2026-09-18; move saved settings off it.
   if (/^gemini-2\./.test(db.settings.model)) db.settings.model = DEFAULTS.model;
   // Follows stored before the friend rule lack the private/verified fields: refetch on the next Sync.

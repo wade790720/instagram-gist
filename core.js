@@ -84,7 +84,7 @@ const Core = (() => {
     const l = LANGS[lang] || LANGS.en;
     const extra = [
       ...(notes.length ? ['', 'Follow these instructions from the user (later ones win on conflict):', ...notes.map(n => `- ${n}`)] : []),
-      ...(current ? ['', 'Previous digest. Improve it; keep the [n] source numbers valid:', current] : []),
+      ...(current ? ['', 'Previous digest. Use it as the base; the instructions above decide the new form. Keep the [n] source numbers valid:', current] : []),
     ];
     return [
       `These are Instagram posts a user saved under the topic "${cat}".`,
@@ -124,6 +124,13 @@ const Core = (() => {
     return Object.entries(m).sort((a, b) => b[1] - a[1]);
   }
 
+  // Before v0.2 a topic held one digest object; now it holds a list of digests (different angles
+  // on the same posts, each with its own instructions). Converts in place, safe to run every load.
+  function normalizeSummaries(all = {}) {
+    for (const [cat, v] of Object.entries(all)) if (!Array.isArray(v)) all[cat] = [{ id: 'd0', ...v }];
+    return all;
+  }
+
   // Old sources keep their [n] numbers; new posts are appended after them.
   function orderSources(prevIds, posts) {
     const byId = new Map(posts.map(p => [p.id, p]));
@@ -139,7 +146,7 @@ const Core = (() => {
   const matches = (x, q) =>
     [x.username, x.name, x.user, x.caption, x.alt, x.cat].join(' ').toLowerCase().includes(q.toLowerCase());
 
-  return { slimPost, slimUser, markFriends, keepCats, mergeById, itemText, categorizePrompt, summaryPrompt, parseJson, applyCategories, groupCounts, orderSources, newSources, matches };
+  return { slimPost, slimUser, markFriends, keepCats, mergeById, itemText, categorizePrompt, summaryPrompt, parseJson, applyCategories, groupCounts, normalizeSummaries, orderSources, newSources, matches };
 })();
 
 if (typeof module !== 'undefined') module.exports = Core;
