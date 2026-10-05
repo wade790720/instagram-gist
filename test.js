@@ -69,6 +69,13 @@ assert.match(p, /Existing: 美髮/);
 assert.match(p, /\n1\. @kai Kai 剪髮\n2\. @hairbykai: /);
 assert.match(C.summaryPrompt('美髮', [post], 'en'), /\[1\] @hairbykai: .*\[image: text: 剪髮步驟/);
 assert.doesNotMatch(C.summaryPrompt('美髮', [post], 'en'), /instructions from the user|Previous digest/);
+// Big topics stay inside the prompt budget: 200 posts with 5000-char captions and alt text.
+const long = 'x'.repeat(5000);
+const big = Array.from({ length: 200 }, (_, i) => ({ id: String(i), user: 'u', caption: long, alt: long }));
+assert.ok(C.summaryPrompt('T', big, 'zh').length < 75000, 'summary prompt over budget');
+// Small topics keep long clips (1500 chars per field).
+assert.ok(C.summaryPrompt('T', big.slice(0, 3), 'zh').includes('x'.repeat(1500)));
+
 // Saved rewrite notes and the previous digest are both passed back to the model.
 const refine = C.summaryPrompt('美髮', [post], 'zh', ['用底層邏輯收斂', '合併同質內容'], '• 舊摘要 [1]');
 assert.match(refine, /- 用底層邏輯收斂\n- 合併同質內容/);

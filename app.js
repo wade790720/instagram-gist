@@ -130,18 +130,21 @@ async function gemini(prompt, json, model) {
     });
     if (r.ok) return ((await r.json()).candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
     const body = await r.text();
+    // Google's own message: names a retired model's replacement, or which limit was hit.
+    let msg = body.slice(0, 300);
+    try { msg = JSON.parse(body).error.message || msg; } catch { /* not JSON, keep raw text */ }
     // Google says how long to wait. Per-minute limits clear in under a minute: wait and retry.
     // A daily quota says ~18 h: retrying is pointless, so stop and say so.
-    const wait = Number(body.match(/"retryDelay":\s*"([\d.]+)s"/)?.[1] ?? 20 * (attempt + 1));
+    const told = body.match(/"retryDelay":\s*"([\d.]+)s"/)?.[1];
+    const wait = Number(told ?? 20 * (attempt + 1));
     if ((r.status === 429 || r.status === 503) && wait <= 90 && attempt < 3) {
-      status(t('rateLimited', Math.ceil(wait))); // else the bar keeps moving under an old message
+      // Show the reason too, so "overloaded" (503) and "limit X exceeded" (429) can be told apart.
+      status(`${t('rateLimited', Math.ceil(wait))} (${r.status}: ${msg.slice(0, 120)})`);
       await sleep(wait * 1000);
       continue;
     }
-    if (r.status === 429) throw new Error(t('quotaOut', model, Math.ceil(wait / 3600)));
-    // Show Google's own message in full: it names the replacement model when one is retired.
-    let msg = body.slice(0, 300);
-    try { msg = JSON.parse(body).error.message || msg; } catch { /* not JSON, keep raw text */ }
+    // Only call it the daily quota when Google gave a long retryDelay; otherwise show its text.
+    if (r.status === 429 && told && wait > 90) throw new Error(t('quotaOut', model, Math.ceil(wait / 3600)));
     throw new Error(`Gemini ${r.status}: ${msg}`);
   }
 }

@@ -96,9 +96,15 @@ const Core = (() => {
       ...extra,
       '',
       'Sources:',
-      ...posts.map((p, i) => `[${i + 1}] ${itemText(p, 1500)}`),
+      ...posts.map((p, i) => `[${i + 1}] ${itemText(p, perPost(posts.length))}`),
     ].join('\n');
   }
+
+  // Free-tier tokens-per-minute is small: one 114-post prompt at 1500 chars (caption + alt each)
+  // was ~340k chars and got 429 on every retry. Fixed total budget: more posts, shorter clips.
+  // ponytail: chars, not tokens; CJK is about 1 token per char, so 60k chars stays well under the limit.
+  const SUMMARY_BUDGET = 60000;
+  const perPost = n => Math.max(150, Math.min(1500, Math.floor(SUMMARY_BUDGET / 2 / Math.max(n, 1))));
 
   function parseJson(text) {
     const t = text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
