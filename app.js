@@ -120,7 +120,8 @@ async function fromIg(kind, known, maxPages) {
 
 // ---------- Gemini ----------
 
-async function gemini(prompt, json, model) {
+// fallback: a second model to use when `model` is overloaded (503). The newest model often is.
+async function gemini(prompt, json, model, fallback) {
   const { apiKey } = db.settings;
   for (let attempt = 0; ; attempt++) {
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
@@ -135,6 +136,13 @@ async function gemini(prompt, json, model) {
     try { msg = JSON.parse(body).error.message || msg; } catch { /* not JSON, keep raw text */ }
     // Google says how long to wait. Per-minute limits clear in under a minute: wait and retry.
     // A daily quota says ~18 h: retrying is pointless, so stop and say so.
+    // 503 = this model is busy for everyone right now. After one retry, switch models instead of
+    // waiting out two more minutes of retries that usually fail the same way.
+    if (r.status === 503 && fallback && fallback !== model && attempt >= 1) {
+      status(t('fellBack', model, fallback));
+      [model, fallback, attempt] = [fallback, null, -1];
+      continue;
+    }
     const told = body.match(/"retryDelay":\s*"([\d.]+)s"/)?.[1];
     const wait = Number(told ?? 20 * (attempt + 1));
     if ((r.status === 429 || r.status === 503) && wait <= 90 && attempt < 3) {
@@ -235,7 +243,7 @@ const summarize = (cat, i, note = '', asNew = false) => run(async () => {
   const old = list[i];
   const notes = asNew ? [note.trim()] : [...(old?.notes || []), note.trim()].filter(Boolean);
   const posts = Core.orderSources(old?.sourceIds || [], db.saved.filter(x => x.cat === cat));
-  const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang, notes, old?.text), false, db.settings.summaryModel);
+  const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang, notes, old?.text), false, db.settings.summaryModel, db.settings.model);
   // A blocked prompt returns no text; saving it would wipe the old digest and mark it up to date.
   if (!text.trim()) throw new Error('Gemini: empty response');
   const next = { id: old && !asNew ? old.id : Date.now().toString(36), title: asNew ? note.trim() : old?.title, text, sourceIds: posts.map(p => p.id), notes, at: Date.now() };

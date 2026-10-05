@@ -21,6 +21,7 @@
   "newCat": { "message": "+ New topic…" },
   "newCatPrompt": { "message": "Name of the new topic:" },
   "rateLimited": { "message": "Gemini rate limit. Retrying in $1 s…" },
+  "fellBack": { "message": "$1 is overloaded (503); continuing with $2…" },
   "summarizing": { "message": "Writing digest…" },
   "synced": { "message": "Synced at $1" },
   "error": { "message": "Error: $1" },
