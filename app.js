@@ -2,7 +2,7 @@ const $ = s => document.querySelector(s);
 const t = (k, ...a) => chrome.i18n.getMessage(k, a.map(String)) || k;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const DAY = 864e5;
-const DEFAULTS = { apiKey: '', model: 'gemini-2.5-flash', lang: chrome.i18n.getUILanguage().startsWith('zh') ? 'zh' : 'en' };
+const DEFAULTS = { apiKey: '', model: 'gemini-3.8-flash', lang: chrome.i18n.getUILanguage().startsWith('zh') ? 'zh' : 'en' };
 
 let db = { following: [], saved: [], summaries: {}, settings: {}, lastSync: {} };
 const view = { tab: 'saved', cat: '', q: '' };
@@ -90,7 +90,11 @@ async function gemini(prompt, json) {
     if (r.ok) return ((await r.json()).candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
     // Free tier hits 429 often; it usually clears within a minute.
     if ((r.status === 429 || r.status === 503) && attempt < 3) { await sleep(20000 * (attempt + 1)); continue; }
-    throw new Error(`Gemini ${r.status}: ${(await r.text()).slice(0, 160)}`);
+    // Show Google's own message in full: it names the replacement model when one is retired.
+    const body = await r.text();
+    let msg = body.slice(0, 300);
+    try { msg = JSON.parse(body).error.message || msg; } catch { /* not JSON, keep raw text */ }
+    throw new Error(`Gemini ${r.status}: ${msg}`);
   }
 }
 
@@ -275,6 +279,8 @@ function renderSettings(main) {
 (async () => {
   Object.assign(db, await chrome.storage.local.get(null));
   db.settings = { ...DEFAULTS, ...db.settings };
+  // gemini-2.x returns 404 for keys created after 2026-09-18; move saved settings off it.
+  if (/^gemini-2\./.test(db.settings.model)) db.settings.model = DEFAULTS.model;
   document.querySelectorAll('[data-i18n]').forEach(e => (e.textContent = t(e.dataset.i18n)));
   document.documentElement.lang = chrome.i18n.getUILanguage();
   $('#search').placeholder = t('search');
