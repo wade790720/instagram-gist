@@ -9,6 +9,8 @@ const DEFAULTS = { apiKey: '', model: 'gemini-3.5-flash-lite', summaryModel: 'ge
 let db = { following: [], saved: [], summaries: {}, settings: {}, lastSync: {} };
 const view = { tab: 'saved', cat: '', q: '' };
 let busy = false;
+// Digests the user opened. render() rebuilds the DOM often, so <details> state lives here.
+const opened = new Set();
 
 const save = () => chrome.storage.local.set(db);
 const status = (msg, err) => { $('#status').textContent = msg; $('#status').classList.toggle('err', !!err); };
@@ -19,6 +21,42 @@ function el(tag, props = {}, ...kids) {
   const e = Object.assign(document.createElement(tag), props);
   e.append(...kids.filter(k => k != null && k !== false && k !== ''));
   return e;
+}
+
+// Lucide icons (ISC license), inner SVG markup. Constant strings only, so innerHTML is safe.
+// Rule: sparkles = the button calls Gemini.
+const ICONS = {
+  sync: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  sparkles: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>',
+};
+function icon(name) {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 24 24');
+  s.setAttribute('aria-hidden', 'true');
+  s.innerHTML = ICONS[name];
+  return s;
+}
+
+// Native <dialog>: showModal() traps focus and turns Esc into a 'cancel' event.
+// Resolves to the trimmed text (input mode), true (confirm), or null when cancelled.
+// It settles on the click or key itself: Chrome queues the 'close' event, and it can arrive late.
+function modal(msg, { input = false, ok, danger = false }) {
+  const d = $('#dlg'), field = $('#dlg-input');
+  $('#dlg-msg').textContent = msg;
+  field.hidden = !input;
+  field.value = '';
+  Object.assign($('#dlg-ok'), { textContent: ok, className: danger ? 'danger' : 'primary' });
+  return new Promise(res => {
+    const done = yes => { d.close(); res(!yes ? null : input ? field.value.trim() || null : true); };
+    $('#dlg-ok').onclick = () => done(true);
+    $('#dlg-cancel').onclick = () => done(false);
+    field.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); done(true); } };
+    d.oncancel = e => { e.preventDefault(); done(false); };
+    d.showModal(); // focus lands on Cancel: the safe choice for destructive actions
+    if (input) field.focus();
+  });
 }
 
 // ---------- Instagram ----------
@@ -216,7 +254,7 @@ function render(force) {
     b.classList.toggle('on', on);
     b.ariaCurrent = on ? 'page' : null;
   });
-  $('#search').hidden = !['following', 'saved'].includes(view.tab);
+  $('.search').hidden = !['following', 'saved'].includes(view.tab);
   if (view.tab === 'settings' && !force) return;
   const main = $('#main');
   main.replaceChildren();
@@ -234,7 +272,7 @@ function catPicker(x, cats) {
     el('option', { value: '\u0000new', textContent: t('newCat') }));
   sel.value = x.cat || '';
   sel.onchange = async () => {
-    const c = sel.value === '\u0000new' ? (prompt(t('newCatPrompt')) || '').trim() : sel.value;
+    const c = sel.value === '\u0000new' ? await modal(t('newCatPrompt'), { input: true, ok: t('create') }) : sel.value;
     if (!c) { sel.value = x.cat || ''; return; }
     x.cat = c;
     x.manual = true;
@@ -257,15 +295,14 @@ const postRow = (p, cats) => el('li', {},
 
 function renderList(main) {
   const items = db[view.tab];
-  if (!items.length) return main.append(el('p', { className: 'empty', textContent: t('empty') }), el('button', { className: 'act primary', textContent: t('sync'), onclick: sync }));
+  if (!items.length) return main.append(el('p', { className: 'empty', textContent: t('empty') }), el('button', { className: 'act primary', onclick: sync }, icon('sync'), t('sync')));
   main.append(el('div', { className: 'chips' }, chip('', t('all'), items.length), ...Core.groupCounts(items).map(([c, n]) => chip(c, c, n))));
   // Resume sorting without touching IG (Sync would fetch again) after a quota error or a stop.
   const untagged = items.filter(x => !x.cat).length;
   if (untagged && db.settings.apiKey) main.append(el('p', {}, el('button', {
     className: 'act',
-    textContent: t('sortRest', untagged),
     onclick: () => run(async () => { await categorize(); status(t('sortDone')); }),
-  })));
+  }, icon('sparkles'), t('sortRest', untagged))));
   if (view.tab === 'saved' && view.cat) main.append(summaryBox(view.cat));
   const shown = items.filter(x => (!view.cat || x.cat === view.cat) && (!view.q || Core.matches(x, view.q)));
   // ponytail: renders at most 500 rows; add paging if lists get bigger.
@@ -286,22 +323,22 @@ function digestText(s) {
 
 function summaryBox(cat) {
   const s = db.summaries[cat];
-  if (!s) return el('section', { className: 'summary' }, el('button', { className: 'act primary', textContent: t('makeSummary'), onclick: () => summarize(cat) }));
+  if (!s) return el('section', { className: 'summary' }, el('button', { className: 'act primary', onclick: () => summarize(cat) }, icon('sparkles'), t('makeSummary')));
   const fresh = Core.newSources(s, db.saved.filter(x => x.cat === cat));
   const ask = el('input', { placeholder: t('refinePlaceholder'), ariaLabel: t('refine') });
-  return el('section', { className: 'summary' },
-    el('h3', { textContent: cat }),
+  return el('details', { className: 'summary', open: opened.has(cat), ontoggle: e => opened[e.target.open ? 'add' : 'delete'](cat) },
+    el('summary', { textContent: t('digestTitle', cat, s.sourceIds.length) }),
     digestText(s),
     s.notes?.length > 0 && el('p', { className: 'muted', textContent: t('notesApplied', s.notes.join('；')) }),
     el('form', {
       className: 'refine',
       onsubmit: e => { e.preventDefault(); if (ask.value.trim()) summarize(cat, ask.value); },
-    }, ask, el('button', { className: 'act', textContent: t('refine') })),
+    }, ask, el('button', { className: 'act' }, icon('sparkles'), t('refine'))),
     el('div', { className: 'row' },
       fresh
-        ? el('button', { className: 'act', textContent: t('updateSummary', fresh), onclick: () => summarize(cat) })
+        ? el('button', { className: 'act', onclick: () => summarize(cat) }, icon('sparkles'), t('updateSummary', fresh))
         : el('span', { className: 'muted', textContent: t('upToDate') }),
-      s.prev && el('button', { className: 'act', textContent: t('undo'), onclick: () => undoSummary(cat) })));
+      s.prev && el('button', { className: 'act', onclick: () => undoSummary(cat) }, icon('undo'), t('undo'))));
 }
 
 function renderBookmarks(main) {
@@ -338,8 +375,7 @@ function renderSettings(main) {
     el('hr'),
     el('button', {
       className: 'act',
-      textContent: t('recategorize'),
-      onclick: () => confirm(t('confirmResort')) && run(async () => {
+      onclick: async () => (await modal(t('confirmResort'), { ok: t('recategorize') })) && run(async () => {
         for (const x of [...db.following, ...db.saved]) if (!x.manual) delete x.cat;
         db.summaries = {};
         await save();
@@ -347,18 +383,17 @@ function renderSettings(main) {
         await categorize();
         status('');
       }),
-    }),
+    }, icon('sparkles'), t('recategorize')),
     el('button', {
       className: 'danger act',
-      textContent: t('clearData'),
       onclick: async () => {
-        if (busy || !confirm(t('confirmClear'))) return;
+        if (busy || !(await modal(t('confirmClear'), { ok: t('clearData'), danger: true })) || busy) return;
         db = { following: [], saved: [], summaries: {}, settings: s, lastSync: {} };
         await chrome.storage.local.clear();
         await save();
         render(true);
       },
-    }),
+    }, icon('trash'), t('clearData')),
     el('p', { className: 'muted', textContent: t('lastSync', when(db.lastSync.saved), when(db.lastSync.following)) }));
 }
 
@@ -377,6 +412,7 @@ function renderSettings(main) {
   document.documentElement.lang = chrome.i18n.getUILanguage();
   $('#search').placeholder = t('search');
   $('#search').oninput = e => { view.q = e.target.value; render(); };
+  $('#sync').prepend(icon('sync')); // after the i18n pass, which sets textContent
   $('#sync').onclick = sync;
   document.querySelectorAll('nav button').forEach(b => (b.onclick = () => { view.tab = b.dataset.tab; view.cat = ''; render(true); }));
   if (!db.settings.apiKey) view.tab = 'settings';

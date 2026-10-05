@@ -1,4 +1,4 @@
-# IG 分類器（IG Sorter）
+# instagram-gist
 
 Chrome 擴充功能：把你的 IG 追蹤名單和收藏自動分類，再為每個收藏分類產生重點摘要。
 現階段只給自己用。
