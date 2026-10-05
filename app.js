@@ -199,15 +199,33 @@ function render(force) {
 const chip = (cat, label, n) =>
   el('button', { className: 'chip' + (view.cat === cat ? ' on' : ''), textContent: `${label} ${n}`, onclick: () => { view.cat = cat; render(); } });
 
-const userRow = u => el('li', {},
+// Native <select> to move one item to another topic, or a new one. manual = true keeps the
+// choice through "Re-sort everything".
+function catPicker(x, cats) {
+  const sel = el('select', { className: 'catpick', ariaLabel: t('moveTo') },
+    ...[...new Set([x.cat || '', ...cats])].map(c => el('option', { value: c, textContent: c || t('unsorted') })),
+    el('option', { value: '\u0000new', textContent: t('newCat') }));
+  sel.value = x.cat || '';
+  sel.onchange = async () => {
+    const c = sel.value === '\u0000new' ? (prompt(t('newCatPrompt')) || '').trim() : sel.value;
+    if (!c) { sel.value = x.cat || ''; return; }
+    x.cat = c;
+    x.manual = true;
+    await save();
+    render();
+  };
+  return sel;
+}
+
+const userRow = (u, cats) => el('li', {},
   el('a', { href: `https://www.instagram.com/${u.username}/`, target: '_blank', textContent: '@' + u.username }),
   el('span', { className: 'muted', textContent: ' ' + u.name }),
-  u.cat && el('span', { className: 'tag', textContent: u.cat }));
+  catPicker(u, cats));
 
-const postRow = p => el('li', {},
+const postRow = (p, cats) => el('li', {},
   el('a', { href: postUrl(p), target: '_blank', textContent: '@' + p.user }),
   el('span', { className: 'tag', textContent: t('type_' + p.type) }),
-  p.cat && el('span', { className: 'tag', textContent: p.cat }),
+  catPicker(p, cats),
   el('p', { className: 'cap', textContent: (p.caption || p.alt).slice(0, 160) }));
 
 function renderList(main) {
@@ -224,7 +242,10 @@ function renderList(main) {
   if (view.tab === 'saved' && view.cat) main.append(summaryBox(view.cat));
   const shown = items.filter(x => (!view.cat || x.cat === view.cat) && (!view.q || Core.matches(x, view.q)));
   // ponytail: renders at most 500 rows; add paging if lists get bigger.
-  main.append(el('ul', { className: 'list' }, ...shown.slice(0, 500).map(view.tab === 'following' ? userRow : postRow)));
+  // Topics from both lists, so an account can move into a topic that so far only has posts.
+  const cats = Core.groupCounts([...db.following, ...db.saved]).map(([c]) => c);
+  const row = view.tab === 'following' ? userRow : postRow;
+  main.append(el('ul', { className: 'list' }, ...shown.slice(0, 500).map(x => row(x, cats))));
 }
 
 // [n] in the digest links back to the n-th source post. Model output goes in as text nodes only.
@@ -288,7 +309,7 @@ function renderSettings(main) {
       className: 'act',
       textContent: t('recategorize'),
       onclick: () => confirm(t('confirmResort')) && run(async () => {
-        for (const x of [...db.following, ...db.saved]) delete x.cat;
+        for (const x of [...db.following, ...db.saved]) if (!x.manual) delete x.cat;
         db.summaries = {};
         await save();
         if (!s.apiKey) return status(t('needKey'));

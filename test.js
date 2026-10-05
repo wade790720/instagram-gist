@@ -18,6 +18,9 @@ assert.equal(C.slimUser({ pk: 42, username: 'a' }).id, '42');
 const old = [{ id: '1', cat: '美髮' }, { id: '2', cat: '滑雪' }];
 assert.deepEqual(C.keepCats([{ id: '1' }, { id: '3' }], old), [{ id: '1', cat: '美髮' }, { id: '3' }]);
 
+// keepCats: a hand-picked topic stays hand-picked after a refetch.
+assert.deepEqual(C.keepCats([{ id: '1' }], [{ id: '1', cat: '滑雪', manual: true }]), [{ id: '1', cat: '滑雪', manual: true }]);
+
 // mergeById: fresh first, old kept after, no duplicates.
 assert.deepEqual(C.mergeById([{ id: '3' }, { id: '1' }], old).map(x => x.id), ['3', '1', '2']);
 

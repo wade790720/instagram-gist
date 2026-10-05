@@ -26,10 +26,14 @@ const Core = (() => {
 
   const slimUser = u => ({ id: idOf(u), username: u.username, name: u.full_name || '' });
 
-  // Full refetch (following): drop accounts no longer present, keep old category tags.
+  // Full refetch (following): drop accounts no longer present, keep old category tags
+  // and the manual flag (user-chosen topics survive re-sorting).
   function keepCats(fresh, old) {
-    const prev = new Map(old.map(x => [x.id, x.cat]));
-    return fresh.map(x => (prev.get(x.id) ? { ...x, cat: prev.get(x.id) } : x));
+    const prev = new Map(old.map(x => [x.id, x]));
+    return fresh.map(x => {
+      const o = prev.get(x.id);
+      return o?.cat ? { ...x, cat: o.cat, ...(o.manual && { manual: true }) } : x;
+    });
   }
 
   // Incremental fetch (saved): new items first, old ones after.
