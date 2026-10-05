@@ -159,16 +159,27 @@ async function categorize() {
   }
 }
 
-const summarize = cat => run(async () => {
+// note: an optional rewrite instruction. It is saved, so later updates keep applying it.
+const summarize = (cat, note = '') => run(async () => {
   status(t('summarizing'));
-  const posts = db.saved.filter(x => x.cat === cat);
-  const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang), false);
+  const old = db.summaries[cat];
+  const notes = [...(old?.notes || []), note.trim()].filter(Boolean);
+  const posts = Core.orderSources(old?.sourceIds || [], db.saved.filter(x => x.cat === cat));
+  const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang, notes, old?.text), false);
   // A blocked prompt returns no text; saving it would wipe the old digest and mark it up to date.
   if (!text.trim()) throw new Error('Gemini: empty response');
-  db.summaries[cat] = { text, sourceIds: posts.map(p => p.id), at: Date.now() };
+  // ponytail: one level of undo (prev); keep a list if people want to step back further.
+  const prev = old && { text: old.text, sourceIds: old.sourceIds, notes: old.notes, at: old.at };
+  db.summaries[cat] = { text, sourceIds: posts.map(p => p.id), notes, at: Date.now(), prev };
   await save();
   status('');
 });
+
+const undoSummary = async cat => {
+  db.summaries[cat] = db.summaries[cat].prev;
+  await save();
+  render();
+};
 
 // ---------- Views ----------
 
@@ -220,12 +231,20 @@ function summaryBox(cat) {
   const s = db.summaries[cat];
   if (!s) return el('section', { className: 'summary' }, el('button', { className: 'act', textContent: t('makeSummary'), onclick: () => summarize(cat) }));
   const fresh = Core.newSources(s, db.saved.filter(x => x.cat === cat));
+  const ask = el('input', { placeholder: t('refinePlaceholder'), ariaLabel: t('refine') });
   return el('section', { className: 'summary' },
     el('h3', { textContent: cat }),
     digestText(s),
-    fresh
-      ? el('button', { className: 'act', textContent: t('updateSummary', fresh), onclick: () => summarize(cat) })
-      : el('p', { className: 'muted', textContent: t('upToDate') }));
+    s.notes?.length && el('p', { className: 'muted', textContent: t('notesApplied', s.notes.join('；')) }),
+    el('form', {
+      className: 'refine',
+      onsubmit: e => { e.preventDefault(); if (ask.value.trim()) summarize(cat, ask.value); },
+    }, ask, el('button', { className: 'act', textContent: t('refine') })),
+    el('div', { className: 'row' },
+      fresh
+        ? el('button', { className: 'act', textContent: t('updateSummary', fresh), onclick: () => summarize(cat) })
+        : el('span', { className: 'muted', textContent: t('upToDate') }),
+      s.prev && el('button', { className: 'act', textContent: t('undo'), onclick: () => undoSummary(cat) })));
 }
 
 function renderBookmarks(main) {

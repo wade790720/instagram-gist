@@ -34,6 +34,10 @@ assert.deepEqual(batch, [{ id: 'a', cat: '行銷' }, { id: 'b' }, { id: 'c' }]);
 // groupCounts: biggest category first, untagged ignored.
 assert.deepEqual(C.groupCounts([{ cat: 'A' }, { cat: 'B' }, { cat: 'B' }, {}]), [['B', 2], ['A', 1]]);
 
+// orderSources: saved list is newest-first, but old digest sources must keep their [n].
+assert.deepEqual(C.orderSources(['1', '2'], [{ id: '9' }, { id: '2' }, { id: '1' }]).map(p => p.id), ['1', '2', '9']);
+assert.deepEqual(C.orderSources([], [{ id: '9' }, { id: '1' }]).map(p => p.id), ['9', '1']);
+
 // newSources: counts posts added after the digest was written.
 assert.equal(C.newSources({ sourceIds: ['1', '2'] }, [{ id: '1' }, { id: '2' }, { id: '9' }]), 1);
 
@@ -42,6 +46,11 @@ const p = C.categorizePrompt([{ username: 'kai', name: 'Kai 剪髮' }, post], ['
 assert.match(p, /Existing: 美髮/);
 assert.match(p, /\n1\. @kai Kai 剪髮\n2\. @hairbykai: /);
 assert.match(C.summaryPrompt('美髮', [post], 'en'), /\[1\] @hairbykai: .*\[image: text: 剪髮步驟/);
+assert.doesNotMatch(C.summaryPrompt('美髮', [post], 'en'), /instructions from the user|Previous digest/);
+// Saved rewrite notes and the previous digest are both passed back to the model.
+const refine = C.summaryPrompt('美髮', [post], 'zh', ['用底層邏輯收斂', '合併同質內容'], '• 舊摘要 [1]');
+assert.match(refine, /- 用底層邏輯收斂\n- 合併同質內容/);
+assert.match(refine, /Previous digest.*\n• 舊摘要 \[1\]/);
 
 // matches: case-insensitive across fields, tolerates missing fields.
 assert.ok(C.matches({ username: 'KaiHair', name: '' }, 'kaih'));

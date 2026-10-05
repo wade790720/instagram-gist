@@ -60,8 +60,14 @@ const Core = (() => {
     ].join('\n');
   }
 
-  function summaryPrompt(cat, posts, lang) {
+  // notes: the user's saved rewrite instructions, re-applied on every regenerate.
+  // current: the previous digest, so a rewrite improves it instead of starting over.
+  function summaryPrompt(cat, posts, lang, notes = [], current = '') {
     const l = LANGS[lang] || LANGS.en;
+    const extra = [
+      ...(notes.length ? ['', 'Follow these instructions from the user (later ones win on conflict):', ...notes.map(n => `- ${n}`)] : []),
+      ...(current ? ['', 'Previous digest. Improve it; keep the [n] source numbers valid:', current] : []),
+    ];
     return [
       `These are Instagram posts a user saved under the topic "${cat}".`,
       `Write a digest in ${l.name} so the user does not need to open each post.`,
@@ -69,7 +75,9 @@ const Core = (() => {
       '- Merge overlapping points. Keep concrete steps, numbers, names, places and tools.',
       '- End every bullet with its source numbers, e.g. [2][5].',
       '- Skip greetings, ads and filler.',
+      ...extra,
       '',
+      'Sources:',
       ...posts.map((p, i) => `[${i + 1}] ${itemText(p, 1500)}`),
     ].join('\n');
   }
@@ -98,6 +106,13 @@ const Core = (() => {
     return Object.entries(m).sort((a, b) => b[1] - a[1]);
   }
 
+  // Old sources keep their [n] numbers; new posts are appended after them.
+  function orderSources(prevIds, posts) {
+    const byId = new Map(posts.map(p => [p.id, p]));
+    const had = new Set(prevIds);
+    return prevIds.map(id => byId.get(id)).filter(Boolean).concat(posts.filter(p => !had.has(p.id)));
+  }
+
   function newSources(summary, posts) {
     const had = new Set(summary.sourceIds);
     return posts.filter(p => !had.has(p.id)).length;
@@ -106,7 +121,7 @@ const Core = (() => {
   const matches = (x, q) =>
     [x.username, x.name, x.user, x.caption, x.alt, x.cat].join(' ').toLowerCase().includes(q.toLowerCase());
 
-  return { slimPost, slimUser, keepCats, mergeById, itemText, categorizePrompt, summaryPrompt, parseJson, applyCategories, groupCounts, newSources, matches };
+  return { slimPost, slimUser, keepCats, mergeById, itemText, categorizePrompt, summaryPrompt, parseJson, applyCategories, groupCounts, orderSources, newSources, matches };
 })();
 
 if (typeof module !== 'undefined') module.exports = Core;
