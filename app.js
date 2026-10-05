@@ -96,7 +96,7 @@ async function gemini(prompt, json) {
 
 // ---------- Actions ----------
 
-// One action at a time. body.busy greys out every button so ignored clicks are visible.
+// One action at a time. body.busy greys out .act buttons so ignored clicks are visible.
 async function run(fn) {
   if (busy) return;
   const setBusy = on => { busy = on; $('#sync').disabled = on; document.body.classList.toggle('busy', on); };
@@ -205,13 +205,13 @@ function digestText(s) {
 
 function summaryBox(cat) {
   const s = db.summaries[cat];
-  if (!s) return el('section', { className: 'summary' }, el('button', { textContent: t('makeSummary'), onclick: () => summarize(cat) }));
+  if (!s) return el('section', { className: 'summary' }, el('button', { className: 'act', textContent: t('makeSummary'), onclick: () => summarize(cat) }));
   const fresh = Core.newSources(s, db.saved.filter(x => x.cat === cat));
   return el('section', { className: 'summary' },
     el('h3', { textContent: cat }),
     digestText(s),
     fresh
-      ? el('button', { textContent: t('updateSummary', fresh), onclick: () => summarize(cat) })
+      ? el('button', { className: 'act', textContent: t('updateSummary', fresh), onclick: () => summarize(cat) })
       : el('p', { className: 'muted', textContent: t('upToDate') }));
 }
 
@@ -239,10 +239,13 @@ function renderSettings(main) {
         Object.assign(s, { apiKey: key.value.trim(), model: model.value.trim() || DEFAULTS.model, lang: lang.value });
         await save();
         status(t('saved'));
+        // A running sync picks up the new key itself; otherwise sort what is already synced.
+        if (s.apiKey) run(async () => { await categorize(); status(t('saved')); });
       },
     }),
     el('hr'),
     el('button', {
+      className: 'act',
       textContent: t('recategorize'),
       onclick: () => confirm(t('confirmResort')) && run(async () => {
         for (const x of [...db.following, ...db.saved]) delete x.cat;
@@ -254,7 +257,7 @@ function renderSettings(main) {
       }),
     }),
     el('button', {
-      className: 'danger',
+      className: 'danger act',
       textContent: t('clearData'),
       onclick: async () => {
         if (busy || !confirm(t('confirmClear'))) return;

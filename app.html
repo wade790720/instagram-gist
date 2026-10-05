@@ -20,8 +20,8 @@
   main, #status { max-width: 820px; margin: 0 auto; padding: 12px 16px; }
   #status { color: var(--muted); font-size: 13px; padding-bottom: 0; min-height: 1.5em; }
   button { font: inherit; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--chip); color: var(--fg); cursor: pointer; }
-  /* Topic chips only filter the view, so they stay usable during a sync. */
-  button:disabled, body.busy main button:not(.chip) { opacity: .5; cursor: default; pointer-events: none; }
+  /* Only .act buttons (they start an action through run()) lock during a sync; Save, chips and tabs stay usable. */
+  button:disabled, body.busy .act { opacity: .5; cursor: default; pointer-events: none; }
   button.on, .chip.on { background: var(--sel); border-color: var(--sel); color: #fff; }
   button.danger { color: var(--danger); }
   input, select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); width: 100%; }
