@@ -11,7 +11,7 @@ const view = { tab: 'saved', cat: '', q: '' };
 let busy = false;
 
 const save = () => chrome.storage.local.set(db);
-const status = msg => ($('#status').textContent = msg);
+const status = (msg, err) => { $('#status').textContent = msg; $('#status').classList.toggle('err', !!err); };
 const postUrl = p => `https://www.instagram.com/p/${p.code}/`;
 const when = ts => (ts ? new Date(ts).toLocaleString() : t('never'));
 
@@ -95,7 +95,11 @@ async function gemini(prompt, json, model) {
     // Google says how long to wait. Per-minute limits clear in under a minute: wait and retry.
     // A daily quota says ~18 h: retrying is pointless, so stop and say so.
     const wait = Number(body.match(/"retryDelay":\s*"([\d.]+)s"/)?.[1] ?? 20 * (attempt + 1));
-    if ((r.status === 429 || r.status === 503) && wait <= 90 && attempt < 3) { await sleep(wait * 1000); continue; }
+    if ((r.status === 429 || r.status === 503) && wait <= 90 && attempt < 3) {
+      status(t('rateLimited', Math.ceil(wait))); // else the bar keeps moving under an old message
+      await sleep(wait * 1000);
+      continue;
+    }
     if (r.status === 429) throw new Error(t('quotaOut', model, Math.ceil(wait / 3600)));
     // Show Google's own message in full: it names the replacement model when one is retired.
     let msg = body.slice(0, 300);
@@ -109,9 +113,16 @@ async function gemini(prompt, json, model) {
 // One action at a time. body.busy greys out .act buttons so ignored clicks are visible.
 async function run(fn) {
   if (busy) return;
-  const setBusy = on => { busy = on; $('#sync').disabled = on; document.body.classList.toggle('busy', on); };
+  // The bar has no value (it just moves) until categorize() knows a count.
+  const setBusy = on => {
+    busy = on;
+    $('#sync').disabled = on;
+    document.body.classList.toggle('busy', on);
+    $('#prog').removeAttribute('value');
+    $('#prog').hidden = !on;
+  };
   setBusy(true);
-  try { await fn(); } catch (e) { status(t('error', e.message)); }
+  try { await fn(); } catch (e) { status(t('error', e.message), true); }
   finally { setBusy(false); render(); }
 }
 
@@ -164,6 +175,7 @@ async function categorize() {
     const todo = list.filter(x => !x.cat);
     for (let i = 0; i < todo.length; i += size) {
       status(t('categorizing', i, todo.length));
+      Object.assign($('#prog'), { max: todo.length, value: i });
       const batch = todo.slice(i, i + size);
       Core.applyCategories(batch, Core.parseJson(await gemini(Core.categorizePrompt(batch, cats(), db.settings.lang), true, db.settings.model)));
       await save();
@@ -199,7 +211,11 @@ const undoSummary = async cat => {
 // Background syncs call render() often; the settings form only redraws on navigation (force)
 // so a half-typed API key is not wiped.
 function render(force) {
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === view.tab));
+  document.querySelectorAll('nav button').forEach(b => {
+    const on = b.dataset.tab === view.tab;
+    b.classList.toggle('on', on);
+    b.ariaCurrent = on ? 'page' : null;
+  });
   $('#search').hidden = !['following', 'saved'].includes(view.tab);
   if (view.tab === 'settings' && !force) return;
   const main = $('#main');
@@ -208,7 +224,7 @@ function render(force) {
 }
 
 const chip = (cat, label, n) =>
-  el('button', { className: 'chip' + (view.cat === cat ? ' on' : ''), textContent: `${label} ${n}`, onclick: () => { view.cat = cat; render(); } });
+  el('button', { className: 'chip' + (view.cat === cat ? ' on' : ''), ariaPressed: String(view.cat === cat), textContent: `${label} ${n}`, onclick: () => { view.cat = cat; render(); } });
 
 // Native <select> to move one item to another topic, or a new one. manual = true keeps the
 // choice through "Re-sort everything".
@@ -241,7 +257,7 @@ const postRow = (p, cats) => el('li', {},
 
 function renderList(main) {
   const items = db[view.tab];
-  if (!items.length) return main.append(el('p', { className: 'empty', textContent: t('empty') }));
+  if (!items.length) return main.append(el('p', { className: 'empty', textContent: t('empty') }), el('button', { className: 'act primary', textContent: t('sync'), onclick: sync }));
   main.append(el('div', { className: 'chips' }, chip('', t('all'), items.length), ...Core.groupCounts(items).map(([c, n]) => chip(c, c, n))));
   // Resume sorting without touching IG (Sync would fetch again) after a quota error or a stop.
   const untagged = items.filter(x => !x.cat).length;
@@ -270,13 +286,13 @@ function digestText(s) {
 
 function summaryBox(cat) {
   const s = db.summaries[cat];
-  if (!s) return el('section', { className: 'summary' }, el('button', { className: 'act', textContent: t('makeSummary'), onclick: () => summarize(cat) }));
+  if (!s) return el('section', { className: 'summary' }, el('button', { className: 'act primary', textContent: t('makeSummary'), onclick: () => summarize(cat) }));
   const fresh = Core.newSources(s, db.saved.filter(x => x.cat === cat));
   const ask = el('input', { placeholder: t('refinePlaceholder'), ariaLabel: t('refine') });
   return el('section', { className: 'summary' },
     el('h3', { textContent: cat }),
     digestText(s),
-    s.notes?.length && el('p', { className: 'muted', textContent: t('notesApplied', s.notes.join('；')) }),
+    s.notes?.length > 0 && el('p', { className: 'muted', textContent: t('notesApplied', s.notes.join('；')) }),
     el('form', {
       className: 'refine',
       onsubmit: e => { e.preventDefault(); if (ask.value.trim()) summarize(cat, ask.value); },
@@ -308,6 +324,7 @@ function renderSettings(main) {
     el('label', {}, t('summaryModel'), summaryModel),
     el('label', {}, t('aiLang'), lang),
     el('button', {
+      className: 'primary',
       textContent: t('save'),
       onclick: async () => {
         Object.assign(s, { apiKey: key.value.trim(), model: model.value.trim() || DEFAULTS.model,
