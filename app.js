@@ -41,11 +41,11 @@ async function igFetch(kind, known, maxPages) {
   let maxId = '';
   for (let page = 0; page < maxPages; page++) {
     const q = maxId ? 'max_id=' + encodeURIComponent(maxId) : '';
-    const url = kind === 'following' ? `/api/v1/friendships/${uid}/following/?count=50&${q}` : `/api/v1/feed/saved/posts/?${q}`;
+    const url = kind === 'saved' ? `/api/v1/feed/saved/posts/?${q}` : `/api/v1/friendships/${uid}/${kind}/?count=50&${q}`; // following | followers
     const r = await fetch(url, { headers });
     if (!r.ok) return { error: 'HTTP ' + r.status, items };
     const j = await r.json();
-    const batch = kind === 'following' ? j.users || [] : (j.items || []).map(i => i.media).filter(Boolean);
+    const batch = kind === 'saved' ? (j.items || []).map(i => i.media).filter(Boolean) : j.users || [];
     const stop = batch.findIndex(x => seen.has(String(x.id ?? x.pk).split('_')[0])); // same rule as Core.idOf
     items.push(...(stop < 0 ? batch : batch.slice(0, stop)));
     maxId = j.next_max_id;
@@ -141,6 +141,11 @@ const sync = () => run(async () => {
     }
     delete db.shortFollowing;
     db.following = Core.keepCats(following.map(Core.slimUser), db.following);
+    // Followers are only needed to spot mutual follows (friends); the list itself is not stored.
+    // ponytail: 40 pages x 50 = 2000 followers read; past that, mutual friends fall back to the private-account signal.
+    status(t('syncingFollowers'));
+    const followers = await fromIg('followers', [], 40);
+    Core.markFriends(db.following, new Set(followers.map(u => Core.slimUser(u).id)), db.settings.lang);
     db.lastSync.following = Date.now();
   }
   await save();
@@ -349,6 +354,8 @@ function renderSettings(main) {
   db.settings = { ...DEFAULTS, ...db.settings };
   // gemini-2.x returns 404 for keys created after 2026-09-18; move saved settings off it.
   if (/^gemini-2\./.test(db.settings.model)) db.settings.model = DEFAULTS.model;
+  // Follows stored before the friend rule lack the private/verified fields: refetch on the next Sync.
+  if (db.following.length && db.following[0].private === undefined) db.lastSync.following = 0;
   document.querySelectorAll('[data-i18n]').forEach(e => (e.textContent = t(e.dataset.i18n)));
   document.documentElement.lang = chrome.i18n.getUILanguage();
   $('#search').placeholder = t('search');

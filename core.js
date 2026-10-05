@@ -2,8 +2,8 @@
 const Core = (() => {
   const TYPES = { 1: 'image', 2: 'video', 8: 'carousel' };
   const LANGS = {
-    zh: { name: 'Traditional Chinese (Taiwan)', other: '其他', eg: '美髮、行銷、滑雪、美食、趣味' },
-    en: { name: 'English', other: 'Other', eg: 'Hair, Marketing, Skiing, Food, Humor' },
+    zh: { name: 'Traditional Chinese (Taiwan)', other: '其他', friends: '好友', eg: '美髮、行銷、滑雪、美食、趣味' },
+    en: { name: 'English', other: 'Other', friends: 'Friends', eg: 'Hair, Marketing, Skiing, Food, Humor' },
   };
   const clip = (s, n) => (s.length > n ? s.slice(0, n) + '…' : s);
   // Media pk (~3e18) is above 2^53 and loses digits as a JSON number; the string `id`
@@ -24,7 +24,21 @@ const Core = (() => {
     };
   }
 
-  const slimUser = u => ({ id: idOf(u), username: u.username, name: u.full_name || '' });
+  const slimUser = u => ({ id: idOf(u), username: u.username, name: u.full_name || '', private: !!u.is_private, verified: !!u.is_verified });
+
+  // Rule, not AI: the model only sees a handle and a name and cannot tell a friend from a shop.
+  // Friend = not verified AND (follows you back OR private account). Hand-picked topics win.
+  // ponytail: mutual small shops/creators land here too; the user moves them once (manual sticks).
+  function markFriends(users, followerIds, lang) {
+    const label = (LANGS[lang] || LANGS.en).friends;
+    let n = 0;
+    for (const u of users) {
+      if (u.manual || u.verified || !(u.private || followerIds.has(u.id))) continue;
+      u.cat = label;
+      n++;
+    }
+    return n;
+  }
 
   // Full refetch (following): drop accounts no longer present, keep old category tags
   // and the manual flag (user-chosen topics survive re-sorting).
@@ -125,7 +139,7 @@ const Core = (() => {
   const matches = (x, q) =>
     [x.username, x.name, x.user, x.caption, x.alt, x.cat].join(' ').toLowerCase().includes(q.toLowerCase());
 
-  return { slimPost, slimUser, keepCats, mergeById, itemText, categorizePrompt, summaryPrompt, parseJson, applyCategories, groupCounts, orderSources, newSources, matches };
+  return { slimPost, slimUser, markFriends, keepCats, mergeById, itemText, categorizePrompt, summaryPrompt, parseJson, applyCategories, groupCounts, orderSources, newSources, matches };
 })();
 
 if (typeof module !== 'undefined') module.exports = Core;

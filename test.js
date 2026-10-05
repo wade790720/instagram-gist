@@ -14,6 +14,20 @@ assert.deepEqual(post, { id: '123', code: 'Abc', user: 'hairbykai', caption: '',
 assert.equal(C.slimPost({ id: '3456789012345678901_42', pk: 3456789012345678901, code: 'X' }).id, '3456789012345678901');
 assert.equal(C.slimUser({ pk: 42, username: 'a' }).id, '42');
 
+// slimUser keeps the two friend signals.
+assert.deepEqual(C.slimUser({ pk: 7, username: 'b', full_name: 'B', is_private: true, is_verified: false }), { id: '7', username: 'b', name: 'B', private: true, verified: false });
+
+// markFriends: mutual or private, never verified, never a hand-picked topic.
+const people = [
+  { id: '1', private: true, verified: false },                  // private -> friend
+  { id: '2', private: false, verified: false },                 // follows back -> friend
+  { id: '3', private: false, verified: false, cat: '美髮' },    // stranger -> keeps AI topic
+  { id: '4', private: true, verified: true, cat: '音樂' },      // verified -> never
+  { id: '5', private: true, verified: false, cat: '滑雪', manual: true }, // hand-picked -> kept
+];
+assert.equal(C.markFriends(people, new Set(['2']), 'zh'), 2);
+assert.deepEqual(people.map(p => p.cat), ['好友', '好友', '美髮', '音樂', '滑雪']);
+
 // keepCats: unfollowed accounts disappear, surviving ones keep their tag.
 const old = [{ id: '1', cat: '美髮' }, { id: '2', cat: '滑雪' }];
 assert.deepEqual(C.keepCats([{ id: '1' }, { id: '3' }], old), [{ id: '1', cat: '美髮' }, { id: '3' }]);
