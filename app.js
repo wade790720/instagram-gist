@@ -2,7 +2,9 @@ const $ = s => document.querySelector(s);
 const t = (k, ...a) => chrome.i18n.getMessage(k, a.map(String)) || k;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const DAY = 864e5;
-const DEFAULTS = { apiKey: '', model: 'gemini-3.8-flash', lang: chrome.i18n.getUILanguage().startsWith('zh') ? 'zh' : 'en' };
+// Free tier, 2026-09: 3.5-flash-lite ~500 calls/day (sorting needs many), 3.8-flash ~20/day
+// (better writing; enough for digests).
+const DEFAULTS = { apiKey: '', model: 'gemini-3.5-flash-lite', summaryModel: 'gemini-3.8-flash', lang: chrome.i18n.getUILanguage().startsWith('zh') ? 'zh' : 'en' };
 
 let db = { following: [], saved: [], summaries: {}, settings: {}, lastSync: {} };
 const view = { tab: 'saved', cat: '', q: '' };
@@ -80,8 +82,8 @@ async function fromIg(kind, known, maxPages) {
 
 // ---------- Gemini ----------
 
-async function gemini(prompt, json) {
-  const { apiKey, model } = db.settings;
+async function gemini(prompt, json, model) {
+  const { apiKey } = db.settings;
   for (let attempt = 0; ; attempt++) {
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
@@ -89,10 +91,13 @@ async function gemini(prompt, json) {
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: json ? { responseMimeType: 'application/json' } : {} }),
     });
     if (r.ok) return ((await r.json()).candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
-    // Free tier hits 429 often; it usually clears within a minute.
-    if ((r.status === 429 || r.status === 503) && attempt < 3) { await sleep(20000 * (attempt + 1)); continue; }
-    // Show Google's own message in full: it names the replacement model when one is retired.
     const body = await r.text();
+    // Google says how long to wait. Per-minute limits clear in under a minute: wait and retry.
+    // A daily quota says ~18 h: retrying is pointless, so stop and say so.
+    const wait = Number(body.match(/"retryDelay":\s*"([\d.]+)s"/)?.[1] ?? 20 * (attempt + 1));
+    if ((r.status === 429 || r.status === 503) && wait <= 90 && attempt < 3) { await sleep(wait * 1000); continue; }
+    if (r.status === 429) throw new Error(t('quotaOut', model, Math.ceil(wait / 3600)));
+    // Show Google's own message in full: it names the replacement model when one is retired.
     let msg = body.slice(0, 300);
     try { msg = JSON.parse(body).error.message || msg; } catch { /* not JSON, keep raw text */ }
     throw new Error(`Gemini ${r.status}: ${msg}`);
@@ -147,14 +152,15 @@ const sync = () => run(async () => {
 
 async function categorize() {
   const cats = () => Core.groupCounts([...db.following, ...db.saved]).map(([c]) => c);
-  // Following first: it is cheap (only @name + display name, so 200 per call) and a quota
-  // error during saved posts would otherwise leave it untouched. Saved posts carry captions: 80 per call.
-  for (const [list, size] of [[db.following, 200], [db.saved, 80]]) {
+  // Following first: it is cheap (only @name + display name, so 400 per call) and a quota
+  // error during saved posts would otherwise leave it untouched. Saved posts carry captions: 150 per call.
+  // Big batches keep a full first sort (~600 follows + ~500 posts) to about 5 calls of the daily quota.
+  for (const [list, size] of [[db.following, 400], [db.saved, 150]]) {
     const todo = list.filter(x => !x.cat);
     for (let i = 0; i < todo.length; i += size) {
       status(t('categorizing', i, todo.length));
       const batch = todo.slice(i, i + size);
-      Core.applyCategories(batch, Core.parseJson(await gemini(Core.categorizePrompt(batch, cats(), db.settings.lang), true)));
+      Core.applyCategories(batch, Core.parseJson(await gemini(Core.categorizePrompt(batch, cats(), db.settings.lang), true, db.settings.model)));
       await save();
       render();
     }
@@ -167,7 +173,7 @@ const summarize = (cat, note = '') => run(async () => {
   const old = db.summaries[cat];
   const notes = [...(old?.notes || []), note.trim()].filter(Boolean);
   const posts = Core.orderSources(old?.sourceIds || [], db.saved.filter(x => x.cat === cat));
-  const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang, notes, old?.text), false);
+  const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang, notes, old?.text), false, db.settings.summaryModel);
   // A blocked prompt returns no text; saving it would wipe the old digest and mark it up to date.
   if (!text.trim()) throw new Error('Gemini: empty response');
   // ponytail: one level of undo (prev); keep a list if people want to step back further.
@@ -287,17 +293,20 @@ function renderSettings(main) {
   const s = db.settings;
   const key = el('input', { type: 'password', value: s.apiKey, placeholder: 'AIza…', autocomplete: 'off' });
   const model = el('input', { value: s.model });
+  const summaryModel = el('input', { value: s.summaryModel });
   const lang = el('select', {}, el('option', { value: 'zh', textContent: '繁體中文' }), el('option', { value: 'en', textContent: 'English' }));
   lang.value = s.lang;
   main.append(
     el('label', {}, t('apiKey'), key),
     el('p', { className: 'muted', textContent: t('apiKeyHelp') }),
     el('label', {}, t('model'), model),
+    el('label', {}, t('summaryModel'), summaryModel),
     el('label', {}, t('aiLang'), lang),
     el('button', {
       textContent: t('save'),
       onclick: async () => {
-        Object.assign(s, { apiKey: key.value.trim(), model: model.value.trim() || DEFAULTS.model, lang: lang.value });
+        Object.assign(s, { apiKey: key.value.trim(), model: model.value.trim() || DEFAULTS.model,
+          summaryModel: summaryModel.value.trim() || DEFAULTS.summaryModel, lang: lang.value });
         await save();
         status(t('saved'));
         // A running sync picks up the new key itself; otherwise sort what is already synced.
@@ -335,6 +344,8 @@ function renderSettings(main) {
 
 (async () => {
   Object.assign(db, await chrome.storage.local.get(null));
+  // Settings saved before summaryModel existed used 3.8-flash for sorting too; move sorting to lite once.
+  if (db.settings?.model && !db.settings.summaryModel && db.settings.model === 'gemini-3.8-flash') db.settings.model = DEFAULTS.model;
   db.settings = { ...DEFAULTS, ...db.settings };
   // gemini-2.x returns 404 for keys created after 2026-09-18; move saved settings off it.
   if (/^gemini-2\./.test(db.settings.model)) db.settings.model = DEFAULTS.model;
