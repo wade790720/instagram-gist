@@ -11,6 +11,7 @@ let busy = false;
 const save = () => chrome.storage.local.set(db);
 const status = msg => ($('#status').textContent = msg);
 const postUrl = p => `https://www.instagram.com/p/${p.code}/`;
+const when = ts => (ts ? new Date(ts).toLocaleString() : t('never'));
 
 function el(tag, props = {}, ...kids) {
   const e = Object.assign(document.createElement(tag), props);
@@ -109,7 +110,8 @@ async function run(fn) {
   finally { setBusy(false); render(); }
 }
 
-const sync = force => run(async () => {
+// Runs only when the user presses Sync: no background fetching, to keep IG traffic low.
+const sync = () => run(async () => {
   status(t('syncingSaved'));
   // ponytail: 50 pages caps the first import (~1000 posts) for good: later syncs stop at the
   // first known post, so older posts are never reached. Store next_max_id to resume if needed.
@@ -118,14 +120,21 @@ const sync = force => run(async () => {
   db.lastSync.saved = Date.now();
   await save(); // keep saved progress even if the following fetch below fails
 
-  // Following has no "newest first" order, so it is a full refetch, at most once a day.
-  if (force || Date.now() - (db.lastSync.following || 0) > DAY) {
+  // Following has no "newest first" order, so it is a full refetch: at most once a day,
+  // however often Sync is pressed.
+  if (Date.now() - (db.lastSync.following || 0) > DAY) {
     status(t('syncingFollowing'));
     // ponytail: 40 pages x 50 = 2000 accounts max; raise if someone follows more.
     const following = await fromIg('following', [], 40);
     // Less than half the stored list usually means IG cut paging short, not a mass unfollow.
-    // Auto-sync refuses it; pressing Sync (force) accepts it, so a real mass unfollow is not stuck.
-    if (!force && following.length < db.following.length / 2) throw new Error(t('followingShrank', following.length, db.following.length));
+    // Refuse it once; the same short count on the next Sync is accepted as real.
+    const short = following.length < db.following.length / 2;
+    if (short && db.shortFollowing !== following.length) {
+      db.shortFollowing = following.length;
+      await save();
+      throw new Error(t('followingShrank', following.length, db.following.length));
+    }
+    delete db.shortFollowing;
     db.following = Core.keepCats(following.map(Core.slimUser), db.following);
     db.lastSync.following = Date.now();
   }
@@ -231,7 +240,6 @@ function renderSettings(main) {
   const model = el('input', { value: s.model });
   const lang = el('select', {}, el('option', { value: 'zh', textContent: '繁體中文' }), el('option', { value: 'en', textContent: 'English' }));
   lang.value = s.lang;
-  const when = ts => (ts ? new Date(ts).toLocaleString() : t('never'));
   main.append(
     el('label', {}, t('apiKey'), key),
     el('p', { className: 'muted', textContent: t('apiKeyHelp') }),
@@ -285,9 +293,9 @@ function renderSettings(main) {
   document.documentElement.lang = chrome.i18n.getUILanguage();
   $('#search').placeholder = t('search');
   $('#search').oninput = e => { view.q = e.target.value; render(); };
-  $('#sync').onclick = () => sync(true);
+  $('#sync').onclick = sync;
   document.querySelectorAll('nav button').forEach(b => (b.onclick = () => { view.tab = b.dataset.tab; view.cat = ''; render(true); }));
   if (!db.settings.apiKey) view.tab = 'settings';
   render(true);
-  sync(false); // auto-sync on every open
+  status(t('lastSync', when(db.lastSync.saved), when(db.lastSync.following)));
 })();
