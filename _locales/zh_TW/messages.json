@@ -59,5 +59,12 @@
   "type_image": { "message": "圖片" },
   "type_video": { "message": "Reels" },
   "type_carousel": { "message": "輪播" },
-  "type_post": { "message": "貼文" }
+  "type_post": { "message": "貼文" },
+  "menuSendBD": { "message": "把這頁的貼文送到 brand-digest 萃取" },
+  "bdNotProfile": { "message": "請先打開博主的主頁或 Reels 分頁，往下滑到想要的範圍，再按一次。" },
+  "bdNone": { "message": "這頁還沒有載入任何貼文。往下滑一點再試。" },
+  "bdSent": { "message": "已送出 $1 則「$2」的貼文到 brand-digest。抓過的會自動跳過。" },
+  "bdBusy": { "message": "brand-digest 正在處理別的任務，等它完成再送。" },
+  "bdOffline": { "message": "連不上 brand-digest。請先啟動它（http://localhost:8765）。" },
+  "bdError": { "message": "brand-digest 沒有接受：$1" }
 }
