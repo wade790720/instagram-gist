@@ -2,14 +2,13 @@
   "manifest_version": 3,
   "name": "__MSG_appName__",
   "description": "__MSG_appDesc__",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "default_locale": "en",
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "unlimitedStorage", "scripting", "contextMenus"],
+  "permissions": ["storage", "unlimitedStorage", "scripting"],
   "host_permissions": [
     "https://www.instagram.com/*",
-    "https://generativelanguage.googleapis.com/*",
-    "http://localhost:8765/*"
+    "https://generativelanguage.googleapis.com/*"
   ],
   "background": { "service_worker": "background.js" },
   "action": { "default_title": "__MSG_appName__" }

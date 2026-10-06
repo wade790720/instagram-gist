@@ -59,12 +59,5 @@
   "type_image": { "message": "Image" },
   "type_video": { "message": "Reel" },
   "type_carousel": { "message": "Carousel" },
-  "type_post": { "message": "Post" },
-  "menuSendBD": { "message": "Send posts on this page to brand-digest" },
-  "bdNotProfile": { "message": "Open a creator's profile or Reels tab, scroll to the range you want, then try again." },
-  "bdNone": { "message": "No posts have loaded on this page yet. Scroll down a bit and try again." },
-  "bdSent": { "message": "Sent $1 posts from \"$2\" to brand-digest. Posts already collected are skipped." },
-  "bdBusy": { "message": "brand-digest is busy with another task. Try again when it finishes." },
-  "bdOffline": { "message": "Can't reach brand-digest. Start it first (http://localhost:8765)." },
-  "bdError": { "message": "brand-digest refused: $1" }
+  "type_post": { "message": "Post" }
 }
