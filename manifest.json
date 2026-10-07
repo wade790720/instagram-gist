@@ -8,6 +8,8 @@
   "permissions": ["storage", "unlimitedStorage", "scripting"],
   "host_permissions": [
     "https://www.instagram.com/*",
+    "https://*.cdninstagram.com/*",
+    "https://*.fbcdn.net/*",
     "https://generativelanguage.googleapis.com/*"
   ],
   "background": { "service_worker": "background.js" },

@@ -21,10 +21,12 @@ const Core = (() => {
       alt: [...new Set(alts)].join(' | '),
       type: TYPES[m.media_type] || 'post',
       takenAt: m.taken_at || 0,
+      pic: m.user?.profile_pic_url || '',
     };
   }
 
-  const slimUser = u => ({ id: idOf(u), username: u.username, name: u.full_name || '', private: !!u.is_private, verified: !!u.is_verified });
+  // pic: IG CDN avatar URL. It is signed and expires; following refreshes it daily, saved posts never do.
+  const slimUser = u => ({ id: idOf(u), username: u.username, name: u.full_name || '', private: !!u.is_private, verified: !!u.is_verified, pic: u.profile_pic_url || '' });
 
   // Rule, not AI: the model only sees a handle and a name and cannot tell a friend from a shop.
   // Friend = not verified AND (follows you back OR private account). Hand-picked topics win.
@@ -124,6 +126,27 @@ const Core = (() => {
     return n;
   }
 
+  // Rename a topic on every item and its digests. Renaming onto an existing topic merges the two.
+  // ponytail: the friend label is fixed, so a renamed 好友 comes back for non-manual follows on the next daily refetch.
+  function renameCat(items, summaries, from, to) {
+    let n = 0;
+    for (const x of items) if (x.cat === from) { x.cat = to; n++; }
+    if (summaries[from]) {
+      summaries[to] = [...(summaries[to] || []), ...summaries[from]];
+      delete summaries[from];
+    }
+    return n;
+  }
+
+  // Delete a topic: its items go back to unsorted (and lose the manual flag), so the next sort
+  // run places them again; its digests are deleted.
+  function deleteCat(items, summaries, cat) {
+    let n = 0;
+    for (const x of items) if (x.cat === cat) { delete x.cat; delete x.manual; n++; }
+    delete summaries[cat];
+    return n;
+  }
+
   function groupCounts(items) {
     const m = {};
     for (const x of items) if (x.cat) m[x.cat] = (m[x.cat] || 0) + 1;
@@ -152,7 +175,7 @@ const Core = (() => {
   const matches = (x, q) =>
     [x.username, x.name, x.user, x.caption, x.alt, x.cat].join(' ').toLowerCase().includes(q.toLowerCase());
 
-  return { slimPost, slimUser, markFriends, keepCats, mergeById, itemText, categorizePrompt, summaryPrompt, parseJson, applyCategories, groupCounts, normalizeSummaries, orderSources, newSources, matches };
+  return { slimPost, slimUser, markFriends, keepCats, mergeById, itemText, categorizePrompt, summaryPrompt, parseJson, applyCategories, renameCat, deleteCat, groupCounts, normalizeSummaries, orderSources, newSources, matches };
 })();
 
 if (typeof module !== 'undefined') module.exports = Core;

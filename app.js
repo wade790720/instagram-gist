@@ -7,6 +7,7 @@ const DAY = 864e5;
 const DEFAULTS = { apiKey: '', model: 'gemini-3.5-flash-lite', summaryModel: 'gemini-3.8-flash', lang: chrome.i18n.getUILanguage().startsWith('zh') ? 'zh' : 'en' };
 
 let db = { following: [], saved: [], summaries: {}, settings: {}, lastSync: {} };
+let avatars = {}; // username -> data URL
 const view = { tab: 'saved', cat: '', q: '' };
 let busy = false;
 // Digests the user opened. render() rebuilds the DOM often, so <details> state lives here.
@@ -30,6 +31,9 @@ const ICONS = {
   sparkles: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
   trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
   undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>',
+  more: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+  pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>',
+  up: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
 };
 function icon(name) {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -107,11 +111,20 @@ async function igTab() {
   return { id: tab.id, created };
 }
 
-async function fromIg(kind, known, maxPages) {
+async function fromIg(kind, known, maxPages, retry = true) {
   const tab = await igTab();
-  // Close the tab only if we opened it; never touch the user's own IG tab.
-  const [{ result }] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: igFetch, args: [kind, known, maxPages] })
-    .finally(() => tab.created && chrome.tabs.remove(tab.id).catch(() => {})); // user may have closed it
+  let result;
+  try {
+    [{ result }] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: igFetch, args: [kind, known, maxPages] });
+  } catch (e) {
+    // IG sometimes reloads its own page while igFetch runs ("Frame with ID 0 was removed").
+    // igTab() waits for the reload to finish; one more try usually works.
+    if (retry && /frame/i.test(e.message)) return fromIg(kind, known, maxPages, false);
+    throw e;
+  } finally {
+    // Close the tab only if we opened it; never touch the user's own IG tab.
+    if (tab.created) chrome.tabs.remove(tab.id).catch(() => {}); // user may have closed it
+  }
   // Chrome has no InjectionResult.error: if igFetch throws, result is just null.
   if (!result) throw new Error(t('igFailed'));
   if (result.error) throw new Error(result.error === 'not_logged_in' ? t('loginFirst') : result.error);
@@ -180,8 +193,13 @@ const sync = () => run(async () => {
   status(t('syncingSaved'));
   // ponytail: 50 pages caps the first import (~1000 posts) for good: later syncs stop at the
   // first known post, so older posts are never reached. Store next_max_id to resume if needed.
-  const saved = await fromIg('saved', db.saved.map(x => x.id), 50);
+  // Posts synced before avatars existed have no pic URL: refetch the whole list once (passing no
+  // known ids) to fill it in. Topics and manual picks survive through mergeById.
+  const backfill = db.saved.some(p => p.pic === undefined);
+  const saved = await fromIg('saved', backfill ? [] : db.saved.map(x => x.id), 50);
   db.saved = Core.mergeById(saved.map(Core.slimPost), db.saved);
+  // Posts past the 50-page cap stay without a URL; mark them so the refetch never repeats.
+  for (const p of db.saved) p.pic ??= '';
   db.lastSync.saved = Date.now();
   await save(); // keep saved progress even if the following fetch below fails
 
@@ -209,11 +227,45 @@ const sync = () => run(async () => {
     db.lastSync.following = Date.now();
   }
   await save();
+  await fetchAvatars();
   render();
   if (!db.settings.apiKey) return status(t('needKey'));
   await categorize();
   status(t('synced', new Date().toLocaleTimeString()));
 });
+
+// IG's CDN blocks <img> on other sites, and its URLs expire. host_permissions let the extension
+// fetch them, so each avatar is downloaded once and kept as a data URL. It has its own storage
+// key, not db, so save() does not rewrite ~5 MB on every call.
+// ponytail: never refreshed once stored; a changed avatar stays old until "Delete all data".
+async function fetchAvatars() {
+  const urls = new Map();
+  for (const p of db.saved) if (p.pic) urls.set(p.user, p.pic);
+  for (const u of db.following) if (u.pic) urls.set(u.username, u.pic); // fresher than saved posts: wins
+  const todo = [...urls].filter(([name]) => !avatars[name]);
+  const total = todo.length;
+  let done = 0;
+  const worker = async () => {
+    for (let job; (job = todo.pop()); ) {
+      const [name, url] = job;
+      try {
+        const r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' });
+        if (r.ok) {
+          const blob = await r.blob();
+          avatars[name] = await new Promise(res => {
+            const f = new FileReader();
+            f.onload = () => res(f.result);
+            f.readAsDataURL(blob);
+          });
+        }
+      } catch { /* expired or blocked: the grey circle stays */ }
+      status(t('syncingAvatars', ++done, total));
+    }
+  };
+  // ponytail: 6 at a time; the CDN is not the rate-limited API, so no pauses.
+  await Promise.all(Array.from({ length: 6 }, worker));
+  if (total) await chrome.storage.local.set({ avatars });
+}
 
 async function categorize() {
   const cats = () => Core.groupCounts([...db.following, ...db.saved]).map(([c]) => c);
@@ -291,8 +343,94 @@ function render(force) {
   ({ following: renderList, saved: renderList, bookmarks: renderBookmarks, settings: renderSettings })[view.tab](main);
 }
 
-const chip = (cat, label, n) =>
-  el('button', { className: 'chip' + (view.cat === cat ? ' on' : ''), ariaPressed: String(view.cat === cat), textContent: `${label} ${n}`, onclick: () => { view.cat = cat; render(); } });
+// Topic chips. Edit sits on the chip itself, as in Gmail, Todoist and Notion: the selected chip
+// gets a "⋯" button, and right-click opens the same menu on any chip.
+function chip(cat, label, n) {
+  const on = view.cat === cat;
+  const b = el('button', {
+    className: 'chip' + (on ? ' on' : ''), ariaPressed: String(on), textContent: `${label} ${n}`,
+    onclick: () => {
+      if (view.cat === cat) return;
+      view.cat = cat;
+      render();
+      // Only on a new selection: render() also runs on every search keystroke, and the
+      // "⋯" must not slide in again each time.
+      $('.chip.more')?.classList.add('enter');
+    },
+  });
+  if (!cat) return b; // "All" is not a topic
+  b.oncontextmenu = e => { e.preventDefault(); catMenu(cat, b, b); };
+  if (!on) return b;
+  const group = el('span', { className: 'chipgroup' }, b);
+  // .act: locked during a sync or digest, which could still be writing under the old name.
+  const more = el('button', { className: 'chip more act', ariaLabel: t('editCat', cat), title: t('editCat', cat), ariaHasPopup: 'menu', onclick: () => catMenu(cat, more, group) }, icon('more'));
+  group.append(more);
+  return group;
+}
+
+const allItems = () => [...db.following, ...db.saved];
+
+// Dropdown under the "⋯" (or under a right-clicked chip): Edit / Delete.
+// One shared popover (#catmenu in app.html); Esc or a click outside closes it (light dismiss).
+// node: the chip element that Edit turns into a text field.
+function catMenu(cat, anchor, node) {
+  if (busy) return;
+  const m = $('#catmenu');
+  const r = anchor.getBoundingClientRect();
+  Object.assign(m.style, { top: r.bottom + 6 + 'px', left: Math.max(16, Math.min(r.left, innerWidth - 176)) + 'px' });
+  $('#catmenu-edit').onclick = () => { m.hidePopover(); editChip(cat, node); };
+  $('#catmenu-delete').onclick = async () => {
+    m.hidePopover();
+    const n = allItems().filter(x => x.cat === cat).length;
+    if (!(await modal(t('confirmDeleteCat', cat, n), { ok: t('deleteCat'), danger: true })) || busy) return;
+    Core.deleteCat(allItems(), db.summaries, cat);
+    if (view.cat === cat) view.cat = '';
+    await save();
+    render();
+  };
+  // Arrow keys move between the two items, as in a native menu.
+  const items = [$('#catmenu-edit'), $('#catmenu-delete')];
+  m.onkeydown = e => {
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
+  };
+  m.showPopover();
+  items[0].focus();
+}
+
+// The chip itself becomes a text field. Enter saves; Esc or clicking away cancels, so a
+// half-typed name never merges two topics by accident.
+// Topics are shared by following and saved, so both lists change together.
+function editChip(cat, node) {
+  const others = Core.groupCounts(allItems()).map(([c]) => c).filter(c => c !== cat);
+  const before = $('#status').textContent;
+  const input = el('input', { className: 'chip chipedit', value: cat, ariaLabel: t('editCat', cat), autocomplete: 'off' });
+  // Merging is said before it happens (in the status line above the chips), not discovered after.
+  const hint = () => { const v = input.value.trim(); status(others.includes(v) ? t('mergeHint', v) : t('enterToSave')); };
+  let done = false;
+  const finish = async keep => {
+    if (done) return; // render() below removes the field, which fires blur again
+    done = true;
+    status(before);
+    const to = input.value.trim();
+    if (keep && to && to !== cat && !busy) {
+      Core.renameCat(allItems(), db.summaries, cat, to);
+      if (view.cat === cat) view.cat = to;
+      await save();
+    }
+    render();
+  };
+  input.oninput = hint;
+  input.onkeydown = e => {
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  };
+  input.onblur = () => finish(false);
+  node.replaceWith(input);
+  input.focus();
+  input.select();
+  hint();
+}
 
 // Native <select> to move one item to another topic, or a new one. manual = true keeps the
 // choice through "Re-sort everything".
@@ -312,16 +450,22 @@ function catPicker(x, cats) {
   return sel;
 }
 
+// src: a stored data URL (see fetchAvatars). alt '' because the @name sits next to it.
+// Not downloaded yet: no src, so only the grey circle shows and rows keep the same layout.
+const avatar = src => el('img', { className: 'av', alt: '', ...(src && { src }) });
+
 // Rows: name on the left, topic picker pinned to the right edge, so moving many items
 // keeps the mouse in one column.
 const userRow = (u, cats) => el('li', {},
   el('div', { className: 'who' },
+    avatar(avatars[u.username]),
     el('a', { href: `https://www.instagram.com/${u.username}/`, target: '_blank', textContent: '@' + u.username }),
     el('span', { className: 'muted', textContent: ' ' + u.name })),
   catPicker(u, cats));
 
 const postRow = (p, cats) => el('li', {},
   el('div', { className: 'who' },
+    avatar(avatars[p.user]),
     el('a', { href: postUrl(p), target: '_blank', textContent: '@' + p.user }),
     el('span', { className: 'tag', textContent: t('type_' + p.type) })),
   catPicker(p, cats),
@@ -435,6 +579,7 @@ function renderSettings(main) {
         if (busy || !(await modal(t('confirmClear'), { ok: t('clearData'), danger: true })) || busy) return;
         db = { following: [], saved: [], summaries: {}, settings: s, lastSync: {} };
         await chrome.storage.local.clear();
+        avatars = {};
         await save();
         render(true);
       },
@@ -445,21 +590,36 @@ function renderSettings(main) {
 // ---------- Start ----------
 
 (async () => {
-  Object.assign(db, await chrome.storage.local.get(null));
+  // avatars has its own storage key and stays out of db (see fetchAvatars).
+  const { avatars: stored, ...rest } = await chrome.storage.local.get(null);
+  avatars = stored || {};
+  Object.assign(db, rest);
   // Settings saved before summaryModel existed used 3.8-flash for sorting too; move sorting to lite once.
   if (db.settings?.model && !db.settings.summaryModel && db.settings.model === 'gemini-3.8-flash') db.settings.model = DEFAULTS.model;
   db.settings = { ...DEFAULTS, ...db.settings };
   db.summaries = Core.normalizeSummaries(db.summaries);
   // gemini-2.x returns 404 for keys created after 2026-09-18; move saved settings off it.
   if (/^gemini-2\./.test(db.settings.model)) db.settings.model = DEFAULTS.model;
-  // Follows stored before the friend rule lack the private/verified fields: refetch on the next Sync.
-  if (db.following.length && db.following[0].private === undefined) db.lastSync.following = 0;
+  // Follows stored before the friend rule (private/verified) or avatars (pic) lack fields: refetch on the next Sync.
+  if (db.following.length && (db.following[0].private === undefined || db.following[0].pic === undefined)) db.lastSync.following = 0;
   document.querySelectorAll('[data-i18n]').forEach(e => (e.textContent = t(e.dataset.i18n)));
   document.documentElement.lang = chrome.i18n.getUILanguage();
   $('#search').placeholder = t('search');
   $('#search').oninput = e => { view.q = e.target.value; render(); };
   $('#sync').prepend(icon('sync')); // after the i18n pass, which sets textContent
   $('#sync').onclick = sync;
+  // Shown after about one screen of scrolling.
+  Object.assign($('#top'), { ariaLabel: t('backToTop'), title: t('backToTop'),
+    onclick: () => scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }) });
+  $('#top').append(icon('up'));
+  addEventListener('scroll', () => {
+    $('#top').hidden = scrollY < innerHeight;
+    // The menu is placed under its chip once; close it rather than leave it floating.
+    if ($('#catmenu').matches(':popover-open')) $('#catmenu').hidePopover();
+  }, { passive: true });
+  // After the i18n pass, which sets textContent.
+  $('#catmenu-edit').prepend(icon('pencil'));
+  $('#catmenu-delete').prepend(icon('trash'));
   document.querySelectorAll('nav button').forEach(b => (b.onclick = () => { view.tab = b.dataset.tab; view.cat = ''; render(true); }));
   if (!db.settings.apiKey) view.tab = 'settings';
   render(true);

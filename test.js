@@ -4,18 +4,19 @@ const C = require('./core.js');
 
 // slimPost: carousel alt texts are merged and de-duplicated; missing caption is ''.
 const post = C.slimPost({
-  pk: 123, code: 'Abc', media_type: 8, taken_at: 1700000000, user: { username: 'hairbykai' },
+  pk: 123, code: 'Abc', media_type: 8, taken_at: 1700000000, user: { username: 'hairbykai', profile_pic_url: 'https://cdn/k.jpg' },
   caption: null, accessibility_caption: 'text: 剪髮步驟',
   carousel_media: [{ accessibility_caption: 'text: 剪髮步驟' }, { accessibility_caption: 'text: 吹整' }],
 });
-assert.deepEqual(post, { id: '123', code: 'Abc', user: 'hairbykai', caption: '', alt: 'text: 剪髮步驟 | text: 吹整', type: 'carousel', takenAt: 1700000000 });
+assert.deepEqual(post, { id: '123', code: 'Abc', user: 'hairbykai', caption: '', alt: 'text: 剪髮步驟 | text: 吹整', type: 'carousel', takenAt: 1700000000, pic: 'https://cdn/k.jpg' });
 
 // Big media ids come from the string `id`, not the lossy numeric pk.
 assert.equal(C.slimPost({ id: '3456789012345678901_42', pk: 3456789012345678901, code: 'X' }).id, '3456789012345678901');
 assert.equal(C.slimUser({ pk: 42, username: 'a' }).id, '42');
 
-// slimUser keeps the two friend signals.
-assert.deepEqual(C.slimUser({ pk: 7, username: 'b', full_name: 'B', is_private: true, is_verified: false }), { id: '7', username: 'b', name: 'B', private: true, verified: false });
+// slimUser keeps the two friend signals and the avatar URL ('' when missing).
+assert.deepEqual(C.slimUser({ pk: 7, username: 'b', full_name: 'B', is_private: true, is_verified: false, profile_pic_url: 'https://cdn/b.jpg' }), { id: '7', username: 'b', name: 'B', private: true, verified: false, pic: 'https://cdn/b.jpg' });
+assert.equal(C.slimUser({ pk: 8, username: 'c' }).pic, '');
 
 // markFriends: mutual or private, never verified, never a hand-picked topic.
 const people = [
@@ -47,6 +48,20 @@ assert.deepEqual(C.parseJson('not json'), {});
 const batch = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
 assert.equal(C.applyCategories(batch, { 1: ' 行銷 ', 2: '', 3: 7 }), 1);
 assert.deepEqual(batch, [{ id: 'a', cat: '行銷' }, { id: 'b' }, { id: 'c' }]);
+
+// renameCat: items and digests move; renaming onto an existing topic merges both.
+const items = [{ cat: '行銷' }, { cat: '商業' }, { cat: '行銷' }, {}];
+const digests = { 行銷: [{ id: 'a' }], 商業: [{ id: 'b' }] };
+assert.equal(C.renameCat(items, digests, '行銷', '商業'), 2);
+assert.deepEqual(items.map(x => x.cat), ['商業', '商業', '商業', undefined]);
+assert.deepEqual(digests, { 商業: [{ id: 'b' }, { id: 'a' }] });
+
+// deleteCat: items become unsorted and lose the manual flag; digests go; other topics untouched.
+const tagged = [{ cat: '美食', manual: true }, { cat: '滑雪' }];
+const ds = { 美食: [{ id: 'a' }], 滑雪: [{ id: 'b' }] };
+assert.equal(C.deleteCat(tagged, ds, '美食'), 1);
+assert.deepEqual(tagged, [{}, { cat: '滑雪' }]);
+assert.deepEqual(ds, { 滑雪: [{ id: 'b' }] });
 
 // groupCounts: biggest category first, untagged ignored.
 assert.deepEqual(C.groupCounts([{ cat: 'A' }, { cat: 'B' }, { cat: 'B' }, {}]), [['B', 2], ['A', 1]]);
