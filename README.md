@@ -32,30 +32,33 @@ IG 收藏一多就找不到，追蹤名單也混在一起。IG 自己的收藏�
 | Chrome（或其他 Chromium 瀏覽器） | 116 以上 |
 | Instagram 帳號 | 在同一個瀏覽器登入 instagram.com |
 | Gemini API key | 免費申請：<https://aistudio.google.com/apikey> |
-| Node.js | 只有跑測試才需要，已在 22 測過 |
+| Node.js | 22 以上（建置用） |
 
-步驟（約 3 分鐘）：
+步驟（約 5 分鐘）：
 
-1. 下載這個專案：
+1. 下載這個專案並建置：
    ```bash
    git clone https://github.com/wade790720/instagram-gist.git
+   cd instagram-gist
+   npm install
+   npm run build
    ```
 2. Chrome 網址列輸入 `chrome://extensions`。
 3. 打開右上角「開發人員模式」。
-4. 按「載入未封裝項目」，選這個資料夾。
+4. 按「載入未封裝項目」，選專案裡的 `dist` 資料夾。
 5. 按工具列的擴充功能圖示。第一次打開會進「設定」頁，貼上 Gemini API key，按「儲存」。
 
 ## 使用方式
 
 ### 同步與分類
 
-1. 按右上角「同步」。擴充功能會抓收藏、追蹤名單和粉絲名單，再自動分類。
-2. 用上方的分類標籤篩選，或用搜尋框找帳號、文字。
-3. 分錯了：用每一列右邊的下拉選單改分類，或選「＋ 新分類…」。手動改過的分類，之後重新分類也不會被蓋掉。
-4. 編輯分類：按選取中分類旁的「⋯」，或在任何分類上按右鍵，選「編輯」或「刪除」。
-   - 編輯：分類標籤直接變成輸入框。按 Enter 儲存，按 Esc 或點別處取消。打已有的分類名稱，上方會先提示，按 Enter 後兩個分類合併，摘要也合併。
+1. 按左上角的同步圖示。擴充功能會抓收藏、追蹤名單和粉絲名單，再自動分類。
+2. 用左側欄的分類篩選，或用右上角的搜尋框找帳號、文字。「收藏」以瀑布式圖片呈現，點圖片會另開分頁到 IG 原文。
+3. 分錯了：用每一列右邊的分類選單改分類，或選「新分類…」。手動改過的分類，之後重新分類也不會被蓋掉。
+4. 編輯分類：在左側欄的分類上按「⋯」或按右鍵，選「編輯」或「刪除」。
+   - 編輯：分類名稱直接變成輸入框。按 Enter 儲存，按 Esc 或點別處取消。打已有的分類名稱，下方狀態列會先提示，按 Enter 後兩個分類合併，摘要也合併。
    - 刪除：裡面的項目變成未分類，下次分類時由 AI 重新分。
-5. 分類中途額度用完：之後按「還有 N 筆未分類 · 開始分類」接著分，不會重抓 IG。
+5. 分類中途額度用完：之後按上方的「還有 N 筆未分類 · 開始分類」接著分，不會重抓 IG。
 
 ### 摘要
 
@@ -100,24 +103,28 @@ IG 收藏一多就找不到，追蹤名單也混在一起。IG 自己的收藏�
 | 摘要只讀文字說明和 IG 自動圖片描述，不讀 Reels 語音 | 接上 Brand Digest 的轉錄 |
 | 第一次匯入收藏最多約 1000 則，更舊的抓不到 | 有需要再存下次的分頁位置 |
 | 取消收藏不會被偵測 | 有需要再加「整份重抓」 |
-| 列表最多顯示 500 筆 | 清單變更大再加分頁 |
+| 頭像和收藏圖片下載後不會更新（圖片約 20–30 MB，存在擴充功能的快取） | 有需要再加「重新下載圖片」 |
 | 只能在電腦用 | 加 Cloudflare 同步後做手機網頁版 |
-| IG 改內部 API 就會壞 | 壞了再修 `app.js` 的 `igFetch` |
+| IG 改內部 API 就會壞 | 壞了再修 `src/lib/ig.ts` 的 `igFetch` |
 
 ## 開發
 
-```bash
-node test.js
-```
+React + TypeScript + Vite，介面用 [shadcn/ui](https://ui.shadcn.com/)（Radix + Tailwind），視覺參考 Linear。
 
-沒有輸出就是通過。
+| 指令 | 用途 |
+|---|---|
+| `npm run dev` | 在一般瀏覽器開 `http://localhost:5173/app.html`，用假資料看介面，不用載入擴充功能 |
+| `npm test` | 測 `src/core.ts` |
+| `npm run build` | 型別檢查並輸出到 `dist/` |
 
 | 檔案 | 用途 |
 |---|---|
-| `core.js` | 純邏輯，不用 Chrome API，`test.js` 測的就是它 |
-| `app.js` | 介面、抓 IG、呼叫 Gemini |
-| `app.html` | 頁面與樣式 |
-| `background.js` | 點工具列圖示時，打開或切到唯一的 app 分頁 |
-| `_locales/` | 介面文字（英文、繁體中文） |
+| `src/core.ts` | 純邏輯，不用 Chrome API，`src/core.test.ts` 測的就是它 |
+| `src/lib/actions.ts` | 同步、分類、摘要、改分類等動作 |
+| `src/lib/ig.ts` / `gemini.ts` | 抓 IG、呼叫 Gemini |
+| `src/lib/store.ts` | 資料、畫面狀態、存檔 |
+| `src/components/` | 側欄、列表、摘要、設定；`ui/` 是 shadcn 元件 |
+| `src/background.ts` | 點工具列圖示時，打開或切到唯一的 app 分頁 |
+| `public/` | `manifest.json` 和介面文字（`_locales/`），原樣複製到 `dist/` |
 
-改完程式後，在 `chrome://extensions` 按擴充功能的重新整理鈕，再重新打開頁面。
+改完程式後，跑 `npm run build`，在 `chrome://extensions` 按擴充功能的重新整理鈕，再重新打開頁面。

@@ -1,6 +1,9 @@
-// Run: node test.js  (no output = pass)
-const assert = require('assert/strict');
-const C = require('./core.js');
+// Run: npm test. Fixtures are partial objects, so this file is left out of tsc (see tsconfig.json).
+import assert from 'node:assert/strict';
+import { test } from 'vitest';
+import * as C from './core';
+
+test('core', () => {
 
 // slimPost: carousel alt texts are merged and de-duplicated; missing caption is ''.
 const post = C.slimPost({
@@ -8,7 +11,13 @@ const post = C.slimPost({
   caption: null, accessibility_caption: 'text: 剪髮步驟',
   carousel_media: [{ accessibility_caption: 'text: 剪髮步驟' }, { accessibility_caption: 'text: 吹整' }],
 });
-assert.deepEqual(post, { id: '123', code: 'Abc', user: 'hairbykai', caption: '', alt: 'text: 剪髮步驟 | text: 吹整', type: 'carousel', takenAt: 1700000000, pic: 'https://cdn/k.jpg' });
+assert.deepEqual(post, { id: '123', code: 'Abc', user: 'hairbykai', caption: '', alt: 'text: 剪髮步驟 | text: 吹整', type: 'carousel', takenAt: 1700000000, pic: 'https://cdn/k.jpg', thumb: '' });
+
+// thumbOf: smallest candidate >= 400 px wide, original size for the aspect ratio; carousels use slide 1.
+const cands = [{ url: 'big', width: 1080, height: 1350 }, { url: 'small', width: 320, height: 400 }, { url: 'mid', width: 480, height: 600 }];
+assert.deepEqual(C.thumbOf({ code: 'x', image_versions2: { candidates: cands }, original_width: 1080, original_height: 1350 }), { thumb: 'mid', w: 1080, h: 1350 });
+assert.deepEqual(C.thumbOf({ code: 'x', carousel_media: [{ image_versions2: { candidates: [{ url: 's1', width: 640, height: 640 }] } }] }), { thumb: 's1', w: 640, h: 640 });
+assert.deepEqual(C.thumbOf({ code: 'x', image_versions2: { candidates: [{ url: 'tiny', width: 150, height: 150 }] } }).thumb, 'tiny');
 
 // Big media ids come from the string `id`, not the lossy numeric pk.
 assert.equal(C.slimPost({ id: '3456789012345678901_42', pk: 3456789012345678901, code: 'X' }).id, '3456789012345678901');
@@ -35,6 +44,11 @@ assert.deepEqual(C.keepCats([{ id: '1' }, { id: '3' }], old), [{ id: '1', cat: '
 
 // keepCats: a hand-picked topic stays hand-picked after a refetch.
 assert.deepEqual(C.keepCats([{ id: '1' }], [{ id: '1', cat: '滑雪', manual: true }]), [{ id: '1', cat: '滑雪', manual: true }]);
+
+// IG paging can repeat an item: first copy wins, order kept, in fresh and old lists alike.
+assert.deepEqual(C.uniqById([{ id: '1', cat: 'A' }, { id: '2' }, { id: '1', cat: 'B' }]), [{ id: '1', cat: 'A' }, { id: '2' }]);
+assert.deepEqual(C.keepCats([{ id: '1' }, { id: '1' }], []).length, 1);
+assert.deepEqual(C.mergeById([], [{ id: '1' }, { id: '1' }]).length, 1);
 
 // mergeById: fresh first, old kept after, no duplicates.
 assert.deepEqual(C.mergeById([{ id: '3' }, { id: '1' }], old).map(x => x.id), ['3', '1', '2']);
@@ -100,3 +114,4 @@ assert.match(refine, /Previous digest.*\n• 舊摘要 \[1\]/);
 assert.ok(C.matches({ username: 'KaiHair', name: '' }, 'kaih'));
 assert.ok(C.matches({ user: 'x', caption: '', alt: '', cat: '滑雪' }, '滑雪'));
 assert.ok(!C.matches({ user: 'x', caption: 'abc' }, 'zzz'));
+});

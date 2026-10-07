@@ -2,3 +2,6 @@
 *.crx
 *.pem
 *.stackdump
+node_modules
+dist
+*.tsbuildinfo
