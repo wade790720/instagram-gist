@@ -10,7 +10,8 @@
     "https://www.instagram.com/*",
     "https://*.cdninstagram.com/*",
     "https://*.fbcdn.net/*",
-    "https://generativelanguage.googleapis.com/*"
+    "https://generativelanguage.googleapis.com/*",
+    "https://www.skool.com/*"
   ],
   "background": { "service_worker": "background.js" },
   "action": { "default_title": "__MSG_appName__" }
