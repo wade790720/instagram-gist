@@ -1,5 +1,6 @@
-// Error reporting module: keeps the last errors of this page. After the member agrees once, new errors
-// also go to the error inbox (router.tekuei.com), where a daily AI routine picks them up.
+// Error reporting module: keeps the last errors of this page and sends new ones to the error inbox
+// (router.tekuei.com), where a daily AI routine picks them up. Sending is on by default; the member
+// can turn it off in settings (ReportProblem).
 // The same file lives in instagram-gist, jev-model-router and brand-digest-extension: change all three.
 // Stores and sends no user content: URLs lose their query (API keys travel there), long tokens are
 // masked, messages are cut to 200 characters. The inbox repeats these rules.
@@ -8,7 +9,6 @@ const CONSENT_KEY = 'errorReporting';
 const MAX = 20;
 const ENDPOINT = 'https://router.tekuei.com/api/errors';
 export const SUPPORT_EMAIL = 'tekuei.xx@gmail.com';
-export const ASK_EVENT = 'error-log:ask';
 
 export type ErrorEntry = { at: number; where: string; message: string };
 export type Consent = 'on' | 'off' | undefined;
@@ -17,7 +17,6 @@ export const clean = (text: string) =>
   text.replace(/(https?:\/\/[^\s?#"'<>]+)[?#][^\s"'<>]*/g, '$1').replace(/[A-Za-z0-9_-]{24,}/g, '[…]').slice(0, 200);
 
 let tool = 'unknown';
-let pendingAsk = false;
 const memory: ErrorEntry[] = []; // `npm run dev` pages without chrome.storage
 const hasStorage = () => !!globalThis.chrome?.storage;
 const meta = () => ({
@@ -34,15 +33,11 @@ export async function getReporting(): Promise<Consent> {
   return hasStorage() ? ((await chrome.storage.local.get([CONSENT_KEY]))[CONSENT_KEY] as Consent) : undefined;
 }
 
-/** The member's answer. Saying yes also sends the errors already in the log. */
+/** The member's choice in settings. Turning it back on also sends the errors already in the log. */
 export async function setReporting(on: boolean) {
-  pendingAsk = false;
   if (hasStorage()) await chrome.storage.local.set({ [CONSENT_KEY]: on ? 'on' : 'off' });
   if (on) send((await load()).slice(-10));
 }
-
-/** True when an error happened before anyone was listening for ASK_EVENT. */
-export const needsAsk = () => pendingAsk;
 
 function send(entries: ErrorEntry[]) {
   if (import.meta.env.DEV || !entries.length) return; // errors while developing stay out of the inbox
@@ -57,9 +52,7 @@ export async function record(error: unknown, where = 'page') {
   const log = [...(await load()), entry].slice(-MAX);
   if (hasStorage()) await chrome.storage.local.set({ [KEY]: log });
   else memory.splice(0, memory.length, ...log);
-  const consent = await getReporting();
-  if (consent === 'on') send([entry]);
-  else if (consent === undefined && !pendingAsk) { pendingAsk = true; dispatchEvent(new Event(ASK_EVENT)); }
+  if ((await getReporting()) !== 'off') send([entry]); // on unless the member turned it off
 }
 
 /** Call once per page, first thing, with the tool's id: uncaught errors, rejected promises and console.error land in the log. */

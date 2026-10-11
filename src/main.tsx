@@ -2,7 +2,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import { captureErrors } from './lib/error-log';
-import { ErrorReportingPrompt } from './components/ReportProblem';
 
 captureErrors('ig-sorter'); // product id of IG Sorter; the inbox keys on it, so it stays after the repo rename
 
@@ -22,4 +21,4 @@ const { load } = await import('./lib/actions');
 const { App } = await import('./App');
 const { MembershipGate } = await import('./components/MembershipGate');
 await load();
-createRoot(document.getElementById('root')!).render(<StrictMode><MembershipGate><App /></MembershipGate><ErrorReportingPrompt /></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode><MembershipGate><App /></MembershipGate></StrictMode>);
