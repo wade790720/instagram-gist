@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { Slot } from "radix-ui"
 
-// Brand module: the same file in ig-sorter, jev-model-router and brand-digest-extension (change all three).
+// Brand module: the same file in instagram-gist, jev-model-router and brand-digest-extension (change all three).
 // shadcn/ui new-york Button plus busy feedback (aria-busy) and a reduced-motion-safe press.
 
 const buttonVariants = cva(

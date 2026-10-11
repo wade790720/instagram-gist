@@ -4,7 +4,7 @@ import './index.css';
 import { captureErrors } from './lib/error-log';
 import { ErrorReportingPrompt } from './components/ReportProblem';
 
-captureErrors('ig-sorter');
+captureErrors('ig-sorter'); // product id of IG Sorter; the inbox keys on it, so it stays after the repo rename
 
 // `npm run dev` opens app.html as a plain page, where chrome.* does not exist: fake it with
 // sample data so the UI can be worked on without loading the extension. Not in the build.

@@ -2,7 +2,7 @@
 // Skool has no public API or OAuth, so we load the community's about page with the user's own
 // skool.com session (needs the https://www.skool.com/* host permission) and read the JSON that
 // Next.js embeds in it. Skool can change that page at any time; parse() then throws.
-// The same file lives in ig-sorter and brand-digest-extension: change both.
+// The same file lives in instagram-gist, jev-model-router and brand-digest-extension: change all three.
 export const COMMUNITY_URL = 'https://www.skool.com/forge-1085/about';
 const GROUP_ID = '998361e5ef944ec4a6937379dd581002';
 // ponytail: whitelist of roles seen so far; add the moderator role name once we see it.

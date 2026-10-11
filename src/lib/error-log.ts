@@ -1,6 +1,6 @@
 // Error reporting module: keeps the last errors of this page. After the member agrees once, new errors
 // also go to the error inbox (router.tekuei.com), where a daily AI routine picks them up.
-// The same file lives in ig-sorter, jev-model-router and brand-digest-extension: change all three.
+// The same file lives in instagram-gist, jev-model-router and brand-digest-extension: change all three.
 // Stores and sends no user content: URLs lose their query (API keys travel there), long tokens are
 // masked, messages are cut to 200 characters. The inbox repeats these rules.
 const KEY = 'errorLog';

@@ -1,7 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-// Brand module: the same file in ig-sorter, jev-model-router and brand-digest-extension (change all three).
+// Brand module: the same file in instagram-gist, jev-model-router and brand-digest-extension (change all three).
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (

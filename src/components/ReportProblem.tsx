@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ASK_EVENT, buildReport, getReporting, needsAsk, setReporting, SUPPORT_EMAIL } from '@/lib/error-log';
 
 // Error reporting UI: the settings controls (report button + automatic sending switch) and the
-// one-time question shown after the first error. Same file in ig-sorter, jev-model-router and
+// one-time question shown after the first error. Same file in instagram-gist, jev-model-router and
 // brand-digest-extension (change all three), so it carries its own zh/en text.
 const zh = navigator.language.toLowerCase().startsWith('zh');
 const text = zh ? {

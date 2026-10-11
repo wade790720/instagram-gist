@@ -3,8 +3,8 @@ import { LockKeyhole } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { check, COMMUNITY_URL, type Status } from '@/lib/membership';
 
-// Shows the tool only to Skool community members. Same file in ig-sorter and
-// brand-digest-extension (change both), so it carries its own zh/en text instead of each app's i18n.
+// Shows the tool only to Skool community members. Same file in instagram-gist, jev-model-router and
+// brand-digest-extension (change all three), so it carries its own zh/en text instead of each app's i18n.
 const zh = navigator.language.toLowerCase().startsWith('zh');
 const text = zh ? {
   checking: '確認會員身分中…',
