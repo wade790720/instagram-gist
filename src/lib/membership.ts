@@ -1,6 +1,6 @@
 // Skool membership check: only members of the Wonder Pocket Club community can use the tool.
 // Skool has no public API or OAuth, so we load the community's about page with the user's own
-// skool.com session (needs the https://www.skool.com/* host permission) and read the JSON that
+// skool.com session (needs a skool.com host permission) and read the JSON that
 // Next.js embeds in it. Skool can change that page at any time; parse() then throws.
 // The same file lives in instagram-gist, jev-model-router and brand-digest-extension: change all three.
 export const COMMUNITY_URL = 'https://www.skool.com/forge-1085/about';
