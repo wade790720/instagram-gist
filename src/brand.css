@@ -99,7 +99,8 @@
   html { color-scheme: light; }
   html.dark { color-scheme: dark; }
   /* Inter's tabular figures keep counts and numbers aligned. */
-  body { @apply bg-background text-foreground antialiased; font-feature-settings: "cv11", "tnum"; }
+  /* 14px base text; dense list UIs may override it (ig-sorter uses 13px). */
+  body { @apply bg-background text-foreground text-sm antialiased; font-feature-settings: "cv11", "tnum"; }
 }
 
 @media (prefers-reduced-motion: reduce) {
