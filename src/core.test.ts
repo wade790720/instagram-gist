@@ -97,10 +97,19 @@ const p = C.categorizePrompt([{ username: 'kai', name: 'Kai 剪髮' }, post], ['
 // The user's own categories are the list once there are any.
 assert.match(p, /from this list: 美髮\n/);
 assert.match(p, /exactly 2 Chinese characters/);
-// A first sort starts from the same fixed list every time, capped at 15 with "other".
+// A first sort starts from the same fixed list every time: 14 topics plus "other".
 const first = C.categorizePrompt([post], [], 'zh');
 assert.match(first, /from this list: 行銷, 商業, .*, 運動, 其他\n/);
-assert.equal(first.match(/from this list: (.*)\n/)[1].split(', ').length, C.MAX_TOPICS);
+assert.equal(first.match(/from this list: (.*)\n/)[1].split(', ').length, 15);
+assert.doesNotMatch(first, /Keep the total/);
+
+// applyCategories: new names must follow the length rule, known names always pass.
+const named = [{}, {}, {}, {}];
+C.applyCategories(named, { 1: '滑雪', 2: '心靈療癒', 3: '自我提升', 4: '行銷商業' }, ['自我提升'], 'zh');
+assert.deepEqual(named.map(x => x.cat), ['滑雪', '其他', '自我提升', '其他']);
+const english = [{}, {}];
+C.applyCategories(english, { 1: 'Home Decor', 2: 'Arts and Crafts' }, [], 'en');
+assert.deepEqual(english.map(x => x.cat), ['Home Decor', 'Other']);
 assert.match(p, /\n1\. @kai Kai 剪髮\n2\. @hairbykai: /);
 assert.match(C.summaryPrompt('美髮', [post], 'en'), /\[1\] @hairbykai: .*\[image: text: 剪髮步驟/);
 assert.doesNotMatch(C.summaryPrompt('美髮', [post], 'en'), /instructions from the user|Previous digest/);

@@ -58,7 +58,8 @@ export function thumbOf(m: IgMedia): Pick<Post, 'thumb' | 'w' | 'h'> {
 interface IgUser { id?: string; pk?: number | string; username: string; full_name?: string; is_private?: boolean; is_verified?: boolean; profile_pic_url?: string }
 
 const TYPES: Record<number, PostType> = { 1: 'image', 2: 'video', 8: 'carousel' };
-// topics: the fixed starting list for a first sort, 14 + "other" = the 15-topic cap.
+// topics: the fixed starting list for a first sort. length: the naming rule for any new category,
+// enforced by applyCategories so the sidebar never mixes 2- and 4-character names.
 const LANGS = {
   zh: {
     name: 'Traditional Chinese (Taiwan)', other: '其他', friends: '好友', length: 'exactly 2 Chinese characters',
@@ -69,7 +70,6 @@ const LANGS = {
     topics: ['Marketing', 'Business', 'Tech', 'Design', 'Art', 'Photography', 'Fashion', 'Food', 'Travel', 'Lifestyle', 'Entertainment', 'Music', 'Wellbeing', 'Sports'],
   },
 };
-export const MAX_TOPICS = 15;
 const lang = (l: string) => LANGS[l as Lang] || LANGS.en;
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n) + '…' : s);
 // Media pk (~3e18) is above 2^53 and loses digits as a JSON number; the string `id`
@@ -150,7 +150,7 @@ export function categorizePrompt(items: Item[], cats: string[], l: string) {
   return [
     'Sort these Instagram items (followed accounts or saved posts) into broad topic categories.',
     `- Pick each item's category from this list: ${list.join(', ')}`,
-    `- Only when an item fits none of them, create a new category in ${L.name}, ${L.length}, in the same style as the list. Keep the total at ${MAX_TOPICS} or fewer.`,
+    `- Only when an item fits none of them, create a new category in ${L.name}, ${L.length}, in the same style as the list.`,
     `- Use "${L.other}" when you cannot tell.`,
     'Return only a JSON object that maps every item number to one category, e.g. {"1": "...", "2": "..."}.',
     '',
@@ -195,11 +195,17 @@ export function parseJson(text: string): Record<string, unknown> {
 }
 
 // Items the model skipped stay untagged and get retried on the next run.
-export function applyCategories(batch: Tagged[], map: Record<string, unknown>) {
+// The prompt asks for the naming rule; this makes sure. A new name that breaks it (not exactly
+// 2 characters in Chinese, more than 2 words in English) becomes "other". Known names always pass.
+const fitsRule = (name: string, l: string) => (l === 'zh' ? [...name].length === 2 : name.split(/\s+/).length <= 2);
+export function applyCategories(batch: Tagged[], map: Record<string, unknown>, known: string[] = [], l?: string) {
   let n = 0;
   batch.forEach((x, i) => {
     const c = map[String(i + 1)];
-    if (typeof c === 'string' && c.trim()) { x.cat = c.trim(); n++; }
+    if (typeof c !== 'string' || !c.trim()) return;
+    const name = c.trim();
+    x.cat = !l || known.includes(name) || fitsRule(name, l) ? name : lang(l).other;
+    n++;
   });
   return n;
 }

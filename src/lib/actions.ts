@@ -108,7 +108,9 @@ export async function categorize() {
       ui.progress = i / todo.length;
       status(t('categorizing', i, todo.length));
       const batch = todo.slice(i, i + size);
-      Core.applyCategories(batch, Core.parseJson(await gemini(Core.categorizePrompt(batch, cats(), db.settings.lang), true, db.settings.model)));
+      const known = cats();
+      const answer = Core.parseJson(await gemini(Core.categorizePrompt(batch, known, db.settings.lang), true, db.settings.model));
+      Core.applyCategories(batch, answer, known, db.settings.lang);
       await save();
       emit();
     }
