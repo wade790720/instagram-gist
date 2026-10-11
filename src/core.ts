@@ -58,10 +58,18 @@ export function thumbOf(m: IgMedia): Pick<Post, 'thumb' | 'w' | 'h'> {
 interface IgUser { id?: string; pk?: number | string; username: string; full_name?: string; is_private?: boolean; is_verified?: boolean; profile_pic_url?: string }
 
 const TYPES: Record<number, PostType> = { 1: 'image', 2: 'video', 8: 'carousel' };
+// topics: the fixed starting list for a first sort, 14 + "other" = the 15-topic cap.
 const LANGS = {
-  zh: { name: 'Traditional Chinese (Taiwan)', other: '其他', friends: '好友', eg: '美髮、行銷、滑雪、美食、趣味' },
-  en: { name: 'English', other: 'Other', friends: 'Friends', eg: 'Hair, Marketing, Skiing, Food, Humor' },
+  zh: {
+    name: 'Traditional Chinese (Taiwan)', other: '其他', friends: '好友', length: 'exactly 2 Chinese characters',
+    topics: ['行銷', '商業', '科技', '設計', '藝術', '攝影', '時尚', '美食', '旅遊', '生活', '娛樂', '音樂', '心靈', '運動'],
+  },
+  en: {
+    name: 'English', other: 'Other', friends: 'Friends', length: 'one or two words',
+    topics: ['Marketing', 'Business', 'Tech', 'Design', 'Art', 'Photography', 'Fashion', 'Food', 'Travel', 'Lifestyle', 'Entertainment', 'Music', 'Wellbeing', 'Sports'],
+  },
 };
+export const MAX_TOPICS = 15;
 const lang = (l: string) => LANGS[l as Lang] || LANGS.en;
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n) + '…' : s);
 // Media pk (~3e18) is above 2^53 and loses digits as a JSON number; the string `id`
@@ -133,13 +141,16 @@ export function itemText(x: Item, max = 300) {
   return `@${x.user}: ${clip(x.caption.replace(/\s+/g, ' '), max)}${alt}`;
 }
 
+// The model names categories freely only when nothing constrains it, and the first batch's style then
+// sticks: one run gave 2-character names, the next 4-character ones. So the list is fixed: the
+// user's own categories once there are any, the starting list before that.
 export function categorizePrompt(items: Item[], cats: string[], l: string) {
   const L = lang(l);
+  const list = cats.length ? cats : [...L.topics, L.other];
   return [
     'Sort these Instagram items (followed accounts or saved posts) into broad topic categories.',
-    `- Write category names in ${L.name}, short (1-4 words), like: ${L.eg}.`,
-    `- Reuse an existing category when it fits. Existing: ${cats.length ? cats.join(', ') : '(none)'}`,
-    '- Create a new category only when none fits. Keep the total under 15.',
+    `- Pick each item's category from this list: ${list.join(', ')}`,
+    `- Only when an item fits none of them, create a new category in ${L.name}, ${L.length}, in the same style as the list. Keep the total at ${MAX_TOPICS} or fewer.`,
     `- Use "${L.other}" when you cannot tell.`,
     'Return only a JSON object that maps every item number to one category, e.g. {"1": "...", "2": "..."}.',
     '',

@@ -9,7 +9,9 @@ export async function gemini(prompt: string, json: boolean, model: string, fallb
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': db.settings.apiKey },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: json ? { responseMimeType: 'application/json' } : {} }),
+      // JSON calls are sorting: temperature 0 so the same items land in the same categories each run.
+      // Summaries (plain text) keep the default, where some variety in wording is wanted.
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0 } : {} }),
     });
     if (r.ok) return ((await r.json()).candidates?.[0]?.content?.parts || []).map((p: { text?: string }) => p.text || '').join('');
     const body = await r.text();

@@ -92,9 +92,15 @@ assert.deepEqual(C.orderSources([], [{ id: '9' }, { id: '1' }]).map(p => p.id), 
 // newSources: counts posts added after the digest was written.
 assert.equal(C.newSources({ sourceIds: ['1', '2'] }, [{ id: '1' }, { id: '2' }, { id: '9' }]), 1);
 
-// Prompts: numbered items, existing categories passed for reuse, follow vs post text.
+// Prompts: numbered items, a fixed category list, follow vs post text.
 const p = C.categorizePrompt([{ username: 'kai', name: 'Kai 剪髮' }, post], ['美髮'], 'zh');
-assert.match(p, /Existing: 美髮/);
+// The user's own categories are the list once there are any.
+assert.match(p, /from this list: 美髮\n/);
+assert.match(p, /exactly 2 Chinese characters/);
+// A first sort starts from the same fixed list every time, capped at 15 with "other".
+const first = C.categorizePrompt([post], [], 'zh');
+assert.match(first, /from this list: 行銷, 商業, .*, 運動, 其他\n/);
+assert.equal(first.match(/from this list: (.*)\n/)[1].split(', ').length, C.MAX_TOPICS);
 assert.match(p, /\n1\. @kai Kai 剪髮\n2\. @hairbykai: /);
 assert.match(C.summaryPrompt('美髮', [post], 'en'), /\[1\] @hairbykai: .*\[image: text: 剪髮步驟/);
 assert.doesNotMatch(C.summaryPrompt('美髮', [post], 'en'), /instructions from the user|Previous digest/);
