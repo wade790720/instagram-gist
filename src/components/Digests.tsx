@@ -21,7 +21,7 @@ function DigestText({ d }: { d: Digest }) {
         const n = part.match(/^\[(\d+)\]$/)?.[1];
         const p = n ? db.saved.find(x => x.id === d.sourceIds[Number(n) - 1]) : undefined;
         return p
-          ? <a key={k} href={postUrl(p.code)} target="_blank" className="rounded px-0.5 text-[11px] font-medium text-primary tabular-nums hover:bg-primary/10">{part}</a>
+          ? <a key={k} href={postUrl(p.code)} target="_blank" className="rounded px-0.5 text-[11px] font-medium text-primary-text tabular-nums hover:bg-primary/10">{part}</a>
           : part;
       })}
     </div>
@@ -53,7 +53,7 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
       <CollapsibleTrigger className="flex h-11 w-full items-center gap-2 rounded-lg px-3 text-left outline-none hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/50">
         <ChevronRight className="size-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]/d:rotate-90" />
         <span className="flex-1 truncate font-medium">{d.title ? `${cat} · ${d.title}` : t('digestTitle', cat, d.sourceIds.length)}</span>
-        {fresh > 0 && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">+{fresh}</span>}
+        {fresh > 0 && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary-text">+{fresh}</span>}
         <span className="text-xs text-muted-foreground tabular-nums">{t('sources', d.sourceIds.length)}</span>
       </CollapsibleTrigger>
       <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">

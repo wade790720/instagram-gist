@@ -1,0 +1,107 @@
+/* Brand tokens v0.2.0 for owned React + Tailwind v4 + shadcn/ui products.
+   Canonical copy: Documents/Codex/brand-guidelines/brand.css. Products keep a copy at src/brand.css.
+   Edit the canonical copy, then copy it to each product. Do not edit a product copy.
+   Import it right after Tailwind: @import "tailwindcss"; @import "./brand.css";
+
+   Linear-style base: neutral grays (almost no chroma), one accent used sparingly, thin borders
+   instead of shadows, Inter. Names follow shadcn/ui so its components pick them up as is.
+   The accent is the only brand-specific value. When the Sai identity is final, change --primary,
+   --ring and --primary-text here. Theme follows the system: products set .dark on <html>.
+   Needs the @fontsource-variable/inter package. Embedded UIs inside other sites must not import this file. */
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.5rem;
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.21 0.006 286);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  /* Accent: Radix violet9. White text on it is 5.4:1. Primary actions, focus and selection only. */
+  --primary: #6e56cf;
+  --primary-foreground: #ffffff;
+  --secondary: oklch(0.955 0.001 286);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.955 0.001 286);
+  --muted-foreground: oklch(0.5 0.01 286);
+  --accent: oklch(0.94 0.002 286);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.58 0.21 25);
+  --border: oklch(0.21 0.006 286 / 0.09);
+  --input: oklch(0.21 0.006 286 / 0.12);
+  --ring: #6e56cf;
+  --sidebar: oklch(0.97 0.001 286);
+  --sidebar-foreground: oklch(0.38 0.01 286);
+  /* Accent as text or icon on page and tile backgrounds (Radix violet11). Use it, not --primary, for accent text: 4.5:1 in both themes. */
+  --primary-text: #5746af;
+}
+
+.dark {
+  --background: oklch(0.165 0.004 286);
+  --foreground: oklch(0.97 0.002 286);
+  --card: oklch(0.195 0.004 286);
+  --popover: oklch(0.215 0.005 286);
+  --secondary: oklch(0.25 0.005 286);
+  --muted: oklch(0.25 0.005 286);
+  --muted-foreground: oklch(0.68 0.01 286);
+  --accent: oklch(1 0 0 / 0.06);
+  --destructive: oklch(0.65 0.2 25);
+  --border: oklch(1 0 0 / 0.08);
+  --input: oklch(1 0 0 / 0.1);
+  --ring: #baa7ff;
+  --sidebar: oklch(0.14 0.004 286);
+  --sidebar-foreground: oklch(0.78 0.008 286);
+  --primary-text: #baa7ff;
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", "Noto Sans TC", system-ui, sans-serif;
+  --font-heading: "Inter Variable", "Noto Sans TC", system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-text: var(--primary-text);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+}
+
+/* Product mark: initials on a matte accent tile. A placeholder until a real logo exists. */
+@utility brand-mark {
+  border: 1px solid color-mix(in oklch, var(--primary) 35%, transparent);
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  color: var(--primary-text);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/60; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  /* Inter's tabular figures keep counts and numbers aligned. */
+  body { @apply bg-background text-foreground antialiased; font-feature-settings: "cv11", "tnum"; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
