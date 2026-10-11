@@ -1,6 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
+import { captureErrors } from './lib/error-log';
+
+captureErrors();
 
 // `npm run dev` opens app.html as a plain page, where chrome.* does not exist: fake it with
 // sample data so the UI can be worked on without loading the extension. Not in the build.

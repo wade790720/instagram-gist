@@ -6,6 +6,7 @@ import { t, when } from '@/lib/i18n';
 import { db, ui } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ReportProblem } from '@/components/ReportProblem';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Local form state, so a background sync re-render never wipes a half-typed API key.
@@ -40,6 +41,7 @@ export function SettingsView() {
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" disabled={ui.busy} onClick={resortAll}><Sparkles />{t('recategorize')}</Button>
           <Button variant="ghost" disabled={ui.busy} onClick={clearAll} className="text-destructive hover:text-destructive"><Trash2 />{t('clearData')}</Button>
+          <ReportProblem />
         </div>
       </section>
     </div>

@@ -27,7 +27,7 @@ export function parse(html: string): Exclude<Status, 'unknown'> {
 export async function check(force = false): Promise<Status> {
   // `npm run dev` is a plain web page that cannot reach skool.com: pick the state with ?membership=.
   if (import.meta.env.DEV) return (new URLSearchParams(location.search).get('membership') as Status) || 'member';
-  const saved = (await chrome.storage.local.get(KEY))[KEY] as Saved | undefined;
+  const saved = (await chrome.storage.local.get([KEY]))[KEY] as Saved | undefined;
   const now = Date.now();
   if (!force && saved?.status === 'member' && now - saved.at < RECHECK_MS) return 'member';
   try {
