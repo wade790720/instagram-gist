@@ -26,7 +26,7 @@ export function Sidebar() {
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
       <div className="flex h-12 items-center gap-2 px-3">
-        <span className="grid size-6 place-items-center rounded-md brand-mark text-[10px] font-semibold" aria-hidden="true">IG</span>
+        <img src="/icons/icon-48.png" alt="" className="size-6 rounded-md" />
         <span className="flex-1 truncate font-semibold text-foreground">{t('appShortName')}</span>
         <Tooltip>
           <TooltipTrigger asChild>
