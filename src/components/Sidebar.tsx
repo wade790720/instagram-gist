@@ -5,12 +5,14 @@ import { deleteTopic, renameTopic, sync } from '@/lib/actions';
 import { t } from '@/lib/i18n';
 import { allItems, db, setView, status, ui, type Tab } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TopicDot } from './TopicDot';
 
-const row = 'flex h-7 w-full items-center gap-2 rounded-md px-2 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50';
+const row = 'flex h-9 w-full items-center gap-2 rounded-md px-4 text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50';
 
 export function Sidebar() {
   const { tab, cat } = ui.view;
@@ -37,26 +39,27 @@ export function Sidebar() {
           <TooltipContent side="bottom">{t('sync')}</TooltipContent>
         </Tooltip>
       </div>
+      <Separator />
 
-      <nav className="flex flex-col gap-px px-2">
+      <nav className="flex flex-col gap-px px-2 pt-2">
         {nav.map(([id, Icon, label, n]) => (
           <button key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => setView({ tab: id, cat: '' })}
-            className={cn(row, tab === id ? 'bg-accent text-foreground' : 'hover:bg-accent/60 hover:text-foreground')}>
+            className={cn(row, tab === id ? 'bg-secondary text-foreground' : 'hover:bg-accent hover:text-foreground')}>
             <Icon className="size-4 opacity-80" />
             <span className="flex-1">{label}</span>
-            {n !== undefined && <span className="text-xs tabular-nums text-muted-foreground">{n}</span>}
+            {n !== undefined && <Badge variant="outline" className="tabular-nums">{n}</Badge>}
           </button>
         ))}
       </nav>
 
       {list && list.length > 0 && (
-        <div className="mt-5 flex min-h-0 flex-1 flex-col">
-          <div className="px-4 pb-1 text-xs font-medium text-muted-foreground">{t('topics')}</div>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="px-4 pt-4 pb-2 text-xs text-muted-foreground">{t('topics')}</div>
           <div className="flex-1 overflow-y-auto px-2 pb-3">
-            <button onClick={() => setView({ cat: '' })} className={cn(row, !cat ? 'bg-accent text-foreground' : 'hover:bg-accent/60 hover:text-foreground')}>
+            <button onClick={() => setView({ cat: '' })} className={cn(row, !cat ? 'bg-secondary text-foreground' : 'hover:bg-accent hover:text-foreground')}>
               <span className="size-2" />
               <span className="flex-1">{t('all')}</span>
-              <span className="text-xs tabular-nums text-muted-foreground">{list.length}</span>
+              <Badge variant="outline" className="tabular-nums">{list.length}</Badge>
             </button>
             {Core.groupCounts(list).map(([c, n]) => <TopicRow key={c} cat={c} n={n} on={cat === c} />)}
           </div>
@@ -77,11 +80,11 @@ function TopicRow({ cat, n, on }: { cat: string; n: number; on: boolean }) {
   return (
     <div className="group relative" onContextMenu={e => { e.preventDefault(); if (!ui.busy && !editing) setMenu(true); }}>
       {editing ? <TopicInput cat={cat} done={() => setEditing(false)} /> : (
-        <button onClick={() => setView({ cat })} className={cn(row, 'pr-8', on ? 'bg-accent text-foreground' : 'hover:bg-accent/60 hover:text-foreground')}>
+        <button onClick={() => setView({ cat })} className={cn(row, 'pr-14', on ? 'bg-secondary text-foreground' : 'hover:bg-accent hover:text-foreground')}>
           <TopicDot cat={cat} />
           <span className="flex-1 truncate">{cat}</span>
           {/* The count steps aside for "⋯" in the same spot, so nothing shifts. */}
-          <span className={cn('absolute right-2 text-xs tabular-nums text-muted-foreground transition-opacity duration-150', shown ? 'opacity-0' : 'group-hover:opacity-0')}>{n}</span>
+          <Badge variant="outline" className={cn('absolute right-4 tabular-nums transition-opacity duration-150', shown ? 'opacity-0' : 'group-hover:opacity-0')}>{n}</Badge>
         </button>
       )}
       {!editing && (
@@ -90,7 +93,7 @@ function TopicRow({ cat, n, on }: { cat: string; n: number; on: boolean }) {
           <DropdownMenuTrigger asChild>
             <button aria-label={t('editCat', cat)} disabled={ui.busy}
               className={cn(
-                'absolute top-1/2 right-1 grid size-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground outline-none',
+                'absolute top-1/2 right-3 grid size-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground outline-none',
                 'transition-[opacity,scale,background-color] duration-150 ease-out hover:bg-foreground/10 hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 disabled:hidden',
                 shown ? 'scale-100 opacity-100' : 'scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100',
               )}>
@@ -131,7 +134,7 @@ function TopicInput({ cat, done }: { cat: string; done: () => void }) {
         if (e.key === 'Escape') { e.preventDefault(); finish(); }
       }}
       onBlur={() => finish()}
-      className="h-7 w-full rounded-md bg-background px-2 text-[13px] text-foreground ring-2 ring-ring outline-none"
+      className="h-9 w-full rounded-md bg-background px-2 text-sm text-foreground ring-2 ring-ring outline-none"
     />
   );
 }

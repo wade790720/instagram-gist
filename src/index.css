@@ -3,10 +3,5 @@
 /* Shared brand tokens (copy of Documents/Codex/brand-guidelines/brand.css). Change colors there, not here. */
 @import "./brand.css";
 
-/* Linear density: 13px base for the long sidebar and item lists. */
-@layer base {
-  body { @apply text-[13px]; }
-}
-
 /* Progress bar with no known total yet: a short segment sweeps across. */
 @keyframes indeterminate { from { left: -33%; } to { left: 100%; } }
