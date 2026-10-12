@@ -1,6 +1,6 @@
 {
-  "appName": { "message": "IG 分類器" },
-  "appDesc": { "message": "把你的 IG 追蹤和收藏自動分類，再為每個分類產生重點摘要。" },
+  "appName": { "message": "Instagram 整理師" },
+  "appDesc": { "message": "把 Instagram 的收藏和追蹤自動分類，再為每個分類寫重點摘要。百寶袋俱樂部會員專用。" },
   "tabFollowing": { "message": "追蹤" },
   "tabSaved": { "message": "收藏" },
   "tabBookmarks": { "message": "摘要" },

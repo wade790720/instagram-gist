@@ -1,6 +1,8 @@
-# IG 分類器（instagram-gist）
+# Instagram 整理師（instagram-gist）
 
 Chrome 擴充功能：把你的 IG 追蹤名單和收藏自動分類，再為每個收藏分類產生重點摘要。
+
+名稱對照：repo 名稱是 `instagram-gist`。Chrome 線上應用程式商店的名稱是 Saved Organizer for Instagram，繁體中文是 Instagram 整理師。舊名稱是 IG Sorter（IG 分類器），程式內部代號 `ig-sorter` 沿用舊名，不要改。
 
 ## 目錄
 

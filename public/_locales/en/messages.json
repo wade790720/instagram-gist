@@ -1,6 +1,6 @@
 {
-  "appName": { "message": "IG Sorter" },
-  "appDesc": { "message": "Sort your Instagram follows and saved posts into topics, then digest each topic." },
+  "appName": { "message": "Saved Organizer for Instagram" },
+  "appDesc": { "message": "Sort your Instagram saved posts and followed accounts into topics, with a short digest for each. For Wonder Pocket Club members." },
   "tabFollowing": { "message": "Following" },
   "tabSaved": { "message": "Saved" },
   "tabBookmarks": { "message": "Digests" },
