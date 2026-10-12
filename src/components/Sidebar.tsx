@@ -27,7 +27,7 @@ export function Sidebar() {
     <aside className="flex w-60 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
       <div className="flex h-12 items-center gap-2 px-3">
         <span className="grid size-6 place-items-center rounded-md brand-mark text-[10px] font-semibold" aria-hidden="true">IG</span>
-        <span className="flex-1 truncate font-semibold text-foreground">{t('appName')}</span>
+        <span className="flex-1 truncate font-semibold text-foreground">{t('appShortName')}</span>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon-sm" className="size-7" onClick={sync} disabled={ui.busy} aria-label={t('sync')}>
