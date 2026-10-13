@@ -1,7 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-/* Shared brand tokens (copy of Documents/Codex/brand-guidelines/brand.css). Change colors there, not here. */
+/* Shared brand tokens (copy of Documents/Codex/brand-guidelines/brand.css). Change shared tokens there, not here; only the accent below is this product's own. */
 @import "./brand.css";
+
+/* Accent: plum (Radix plum), to match the puzzle orb icon. White on --primary 4.75:1; --primary-text on light 5.8:1, on dark 9.4:1. */
+:root { --primary: #ab4aba; --ring: #ab4aba; --primary-text: #953ea3; }
+.dark { --ring: #e796f3; --primary-text: #e796f3; }
 
 /* Progress bar with no known total yet: a short segment sweeps across. */
 @keyframes indeterminate { from { left: -33%; } to { left: 100%; } }

@@ -5,8 +5,9 @@
 
    Linear-style base: neutral grays (almost no chroma), one accent used sparingly, thin borders
    instead of shadows, Inter. Names follow shadcn/ui so its components pick them up as is.
-   The accent is the only brand-specific value. When the Sai identity is final, change --primary,
-   --ring and --primary-text here. Theme follows the system: products set .dark on <html>.
+   The accent is the only value that differs. Violet here is Sai's. Each product overrides --primary,
+   --ring and --primary-text in its own index.css to match its orb icon (light and .dark).
+   Theme follows the system: products set .dark on <html>.
    Needs the @fontsource-variable/inter package. Embedded UIs inside other sites must not import this file. */
 @import "@fontsource-variable/inter";
 
