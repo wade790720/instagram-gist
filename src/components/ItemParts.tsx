@@ -19,7 +19,7 @@ export function Avatar({ name, className }: { name: string; className?: string }
 // Move one item to another topic, or a new one (asks for the name).
 // A plain button until first use: hundreds of mounted Radix menus made tab switches lag.
 // modal={false}: a modal menu that opens a dialog ("New topic…") can leave the page unclickable.
-export function TopicPicker({ x, cats, overlay }: { x: Item; cats: string[]; overlay?: boolean }) {
+export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: string[]; overlay?: boolean; className?: string }) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const cls = cn(
@@ -27,6 +27,7 @@ export function TopicPicker({ x, cats, overlay }: { x: Item; cats: string[]; ove
     overlay
       ? 'h-6 max-w-32 rounded-full bg-white/15 px-2 text-[11px] text-white backdrop-blur-sm hover:bg-white/25 data-[state=open]:bg-white/25'
       : 'h-7 w-36 rounded-md px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground',
+    className,
   );
   const label = <>
     <TopicDot cat={x.cat} />

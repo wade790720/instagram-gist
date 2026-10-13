@@ -1,13 +1,19 @@
 import { useSyncExternalStore } from 'react';
 import type { Lang, Post, Summaries, User } from '@/core';
 
-export interface Settings { apiKey: string; model: string; summaryModel: string; lang: Lang }
+export interface Settings {
+  apiKey: string; model: string; summaryModel: string; lang: Lang;
+  /** Following tab: cards (faces) or rows (names). */
+  followView: 'grid' | 'list';
+}
 export interface DB {
   following: User[];
   saved: Post[];
   summaries: Summaries;
   settings: Settings;
   lastSync: { saved?: number; following?: number };
+  /** Topic -> one-line definition from "Tidy topics", sent with every sort. */
+  defs: Record<string, string>;
   /** A suspiciously short following count, refused once (see sync). */
   shortFollowing?: number;
 }
@@ -20,12 +26,13 @@ export const DEFAULTS: Settings = {
   apiKey: '',
   model: 'gemini-3.5-flash-lite',
   summaryModel: 'gemini-3.8-flash',
+  followView: 'grid',
   lang: chrome.i18n.getUILanguage().startsWith('zh') ? 'zh' : 'en',
 };
 
 // ponytail: one mutable store plus a version counter, same model as the old app.js (mutate, then
 // emit). Components re-render on every emit; the lists are small enough that this never shows.
-export const db: DB = { following: [], saved: [], summaries: {}, settings: { ...DEFAULTS }, lastSync: {} };
+export const db: DB = { following: [], saved: [], summaries: {}, settings: { ...DEFAULTS }, lastSync: {}, defs: {} };
 /** username -> data URL. Own storage key, outside db, so save() does not rewrite ~5 MB each time. */
 export const avatars: Record<string, string> = {};
 export const ui = {
@@ -38,6 +45,8 @@ export const ui = {
   /** Digests the user has opened, by "<topic>#<id>". */
   opened: new Set<string>(),
   ask: null as Ask | null,
+  /** "Tidy topics" proposal waiting for the user: merges to tick, definitions to keep. */
+  tidy: null as null | { merges: [string, string][]; defs: Record<string, string> },
   /** Bumped after covers are downloaded, so mounted cards look in the cache again. */
   thumbs: 0,
 };

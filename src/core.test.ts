@@ -129,4 +129,32 @@ assert.match(refine, /Previous digest.*\n• 舊摘要 \[1\]/);
 assert.ok(C.matches({ username: 'KaiHair', name: '' }, 'kaih'));
 assert.ok(C.matches({ user: 'x', caption: '', alt: '', cat: '滑雪' }, '滑雪'));
 assert.ok(!C.matches({ user: 'x', caption: 'abc' }, 'zzz'));
+
+// smallTopics / mergeSmall: topics with <= 5 items join a big one; other, friends and hand-picked items stay.
+const many = (cat: string, n: number, extra = {}) => Array.from({ length: n }, (_, i) => ({ id: cat + i, cat, ...extra }));
+const pool = [...many('娛樂', 6), ...many('喜劇', 2), ...many('玩具', 1), ...many('其他', 1), ...many('好友', 1), ...many('滑雪', 1, { manual: true }), { id: 'mx', cat: '玩具', manual: true }];
+assert.deepEqual(C.smallTopics(pool, 'zh'), { small: ['喜劇', '玩具'], big: ['娛樂'] });
+assert.deepEqual(C.smallTopics(many('喜劇', 2), 'zh').small, []); // no big topic to join yet
+const smallSums = { 喜劇: [{ id: 'd1', text: 't', sourceIds: [] }], 玩具: [{ id: 'd2', text: 't', sourceIds: [] }] };
+assert.equal(C.mergeSmall(pool, smallSums, { 喜劇: '娛樂', 玩具: '娛樂', 滑雪: '不存在' }, ['娛樂']), 3);
+assert.equal(pool.filter(x => x.cat === '娛樂').length, 9);
+assert.equal(pool.find(x => x.id === 'mx').cat, '玩具'); // hand-picked stays
+assert.deepEqual(Object.keys(smallSums), ['玩具', '娛樂']); // 喜劇 emptied: its digest moved; 玩具 keeps a manual item and its digest
+
+// categorizePrompt with definitions: one line per topic; without any, the plain comma list stays.
+const defined = C.categorizePrompt([post], ['心靈', '成長'], 'zh', 300, { 心靈: '情緒、療癒' });
+assert.match(defined, /\n  心靈: 情緒、療癒\n  成長\n/);
+assert.match(C.categorizePrompt([post], ['心靈', '成長'], 'zh', 300, { 其他: 'x' }), /from this list: 心靈, 成長\n/);
+
+// parseTidy: merges only between listed topics, no chains, never other/friends; defs only for listed topics.
+const posts = (cat: string, n: number) => many(cat, n, { user: 'u', caption: 'text', alt: '' });
+const topicsPool = [...posts('心靈', 8), ...posts('成長', 6), ...posts('健康', 3), ...posts('醫療', 9), ...posts('其他', 2)];
+const plan = C.parseTidy({
+  merge: { 健康: '醫療', 成長: '心靈', 心靈: '醫療', 其他: '心靈', 不存在: '醫療', 醫療: 7 },
+  defs: { 心靈: ' 情緒、療癒 ', 醫療: '看病與治療', 其他: 'x', 不存在: 'y', 成長: '' },
+}, topicsPool, 'zh');
+assert.deepEqual(plan.merges, [['健康', '醫療'], ['心靈', '醫療']]); // 成長 -> 心靈 dropped: 心靈 itself merges away
+assert.deepEqual(plan.defs, { 心靈: '情緒、療癒', 醫療: '看病與治療' });
+assert.match(C.tidyPrompt(topicsPool, 'zh'), /\n心靈 \(8 items\): @u: text/);
+assert.doesNotMatch(C.tidyPrompt(topicsPool, 'zh'), /\n其他 \(/);
 });

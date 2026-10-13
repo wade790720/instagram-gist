@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Sparkles, Trash2 } from 'lucide-react';
+import { Combine, Sparkles, Trash2 } from 'lucide-react';
 import type { Lang } from '@/core';
-import { clearAll, resortAll, saveSettings } from '@/lib/actions';
+import { clearAll, resortAll, saveSettings, tidyTopics } from '@/lib/actions';
 import { t, when } from '@/lib/i18n';
 import { db, ui } from '@/lib/store';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ export function SettingsView() {
         <h2 className="text-base font-semibold">{t('sectionData')}</h2>
         <p className="text-muted-foreground">{t('lastSync', when(db.lastSync.saved), when(db.lastSync.following))}</p>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" disabled={ui.busy || !db.settings.apiKey} onClick={tidyTopics}><Combine />{t('tidy')}</Button>
           <Button variant="outline" disabled={ui.busy} onClick={resortAll}><Sparkles />{t('recategorize')}</Button>
           <Button variant="ghost" disabled={ui.busy} onClick={clearAll} className="text-destructive hover:text-destructive"><Trash2 />{t('clearData')}</Button>
           <ReportProblem />

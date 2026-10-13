@@ -109,12 +109,47 @@ export async function categorize() {
       status(t('categorizing', i, todo.length));
       const batch = todo.slice(i, i + size);
       const known = cats();
-      const answer = Core.parseJson(await gemini(Core.categorizePrompt(batch, known, db.settings.lang), true, db.settings.model));
+      const answer = Core.parseJson(await gemini(Core.categorizePrompt(batch, known, db.settings.lang, undefined, db.defs), true, db.settings.model));
       Core.applyCategories(batch, answer, known, db.settings.lang);
       await save();
       emit();
     }
   }
+  // One extra call: topics with 5 items or fewer join a similar big topic (喜劇 -> 娛樂).
+  // ponytail: asks again on every run while a small topic has no similar big one; cheap on the lite model.
+  const { small, big } = Core.smallTopics(allItems(), db.settings.lang);
+  if (!small.length) return;
+  status(t('mergingSmall', small.length));
+  const map = Core.parseJson(await gemini(Core.mergePrompt(small, big, db.settings.lang), true, db.settings.model));
+  Core.mergeSmall(allItems(), db.summaries, map, big);
+  if (ui.view.cat && !allItems().some(x => x.cat === ui.view.cat)) ui.view.cat = '';
+  await save();
+  emit();
+}
+
+// "Tidy topics": the AI proposes merges and a definition per topic; nothing changes until the user
+// applies it in the dialog. The writing model: one call, and the definitions steer every later sort.
+export const tidyTopics = () => run(async () => {
+  status(t('tidying'));
+  const items = [...db.saved, ...db.following];
+  const answer = Core.parseJson(await gemini(Core.tidyPrompt(items, db.settings.lang), true, db.settings.summaryModel, db.settings.model));
+  const plan = Core.parseTidy(answer, items, db.settings.lang);
+  if (!Object.keys(plan.defs).length) throw new Error(t('tidyEmpty'));
+  ui.tidy = plan;
+  status('');
+});
+
+/** merges: the ones the user left ticked. Merging works like renaming onto an existing topic. */
+export async function applyTidy(merges: [string, string][], defs: Record<string, string>) {
+  ui.tidy = null;
+  for (const [from, to] of merges) {
+    Core.renameCat(allItems(), db.summaries, from, to);
+    if (ui.view.cat === from) ui.view.cat = to;
+  }
+  const live = new Set(Core.groupCounts(allItems()).map(([c]) => c));
+  db.defs = Object.fromEntries(Object.entries({ ...db.defs, ...defs }).filter(([c]) => live.has(c)));
+  await save();
+  status(t('tidyDone', merges.length, Object.keys(db.defs).length));
 }
 
 /** Resume sorting without touching IG (Sync would fetch again) after a quota error or a stop. */
@@ -168,6 +203,7 @@ export async function renameTopic(from: string, to: string) {
   if (!to || to === from || ui.busy) return;
   Core.renameCat(allItems(), db.summaries, from, to);
   if (ui.view.cat === from) ui.view.cat = to;
+  if (db.defs[from]) { db.defs[to] ??= db.defs[from]; delete db.defs[from]; }
   await save();
   emit();
 }
@@ -176,6 +212,7 @@ export async function deleteTopic(cat: string) {
   const n = allItems().filter(x => x.cat === cat).length;
   if (!(await ask({ msg: t('confirmDeleteCat', cat, n), ok: t('deleteCat'), danger: true })) || ui.busy) return;
   Core.deleteCat(allItems(), db.summaries, cat);
+  delete db.defs[cat];
   if (ui.view.cat === cat) ui.view.cat = '';
   await save();
   emit();
@@ -216,7 +253,7 @@ export const resortAll = async () => {
 
 export async function clearAll() {
   if (ui.busy || !(await ask({ msg: t('confirmClear'), ok: t('clearData'), danger: true })) || ui.busy) return;
-  Object.assign(db, { following: [] as User[], saved: [] as Post[], summaries: {}, lastSync: {} });
+  Object.assign(db, { following: [] as User[], saved: [] as Post[], summaries: {}, lastSync: {}, defs: {} });
   for (const k of Object.keys(avatars)) delete avatars[k];
   await chrome.storage.local.clear();
   await clearThumbs();

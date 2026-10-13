@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, ChevronRight, Search, Sparkles } from 'lucide-react';
-import { sortRest } from '@/lib/actions';
+import { ArrowRight, ArrowUp, ChevronRight, LayoutGrid, List, Search, Sparkles } from 'lucide-react';
+import { groupCounts } from '@/core';
+import { applyTidy, sortRest } from '@/lib/actions';
 import { t } from '@/lib/i18n';
-import { db, emit, setView, ui, useStore } from '@/lib/store';
+import { allItems, db, emit, save, setView, ui, useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ export function App() {
         </main>
       </div>
       <AskDialog />
+      <TidyDialog />
     </TooltipProvider>
   );
 }
@@ -71,6 +73,7 @@ function Header() {
       {untagged > 0 && !!db.settings.apiKey && (
         <Button size="sm" variant="outline" className="h-7" disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
       )}
+      {tab === 'following' && <ViewToggle />}
       {list && (
         <div className="relative w-64">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -78,6 +81,21 @@ function Header() {
         </div>
       )}
     </header>
+  );
+}
+
+// Following only: cards (faces) or rows (names). Kept in settings, so the choice sticks.
+function ViewToggle() {
+  const v = db.settings.followView;
+  const set = (followView: 'grid' | 'list') => { db.settings.followView = followView; save(); emit(); };
+  const options = [['grid', LayoutGrid, t('viewGrid')], ['list', List, t('viewList')]] as const;
+  return (
+    <div role="group" aria-label={t('viewAs')} className="flex h-7 shrink-0 items-center rounded-md border p-0.5">
+      {options.map(([id, Icon, label]) => (
+        <Button key={id} variant="ghost" size="icon-xs" aria-pressed={v === id} aria-label={label} title={label} onClick={() => set(id)}
+          className={cn('size-6 text-muted-foreground', v === id && 'bg-accent text-foreground')}><Icon className="size-3.5" /></Button>
+      ))}
+    </div>
   );
 }
 
@@ -95,6 +113,48 @@ function StatusBar() {
         </span>
       )}
     </footer>
+  );
+}
+
+// "Tidy topics" review: every merge is ticked by default, untick to keep two topics apart.
+// Definitions are read-only in this first version; topics merged away drop theirs.
+function TidyDialog() {
+  const plan = ui.tidy;
+  const [skip, setSkip] = useState<Set<string>>(new Set());
+  useEffect(() => setSkip(new Set()), [plan]);
+  const counts = Object.fromEntries(groupCounts(allItems()));
+  const close = () => { ui.tidy = null; emit(); };
+  const merges = plan?.merges.filter(([from]) => !skip.has(from)) ?? [];
+  const gone = new Set(merges.map(([from]) => from));
+  const toggle = (from: string) => setSkip(s => { const n = new Set(s); if (!n.delete(from)) n.add(from); return n; });
+
+  return (
+    <AlertDialog open={!!plan} onOpenChange={o => { if (!o) close(); }}>
+      <AlertDialogContent className="max-h-[85vh] overflow-y-auto">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-base">{t('tidy')}</AlertDialogTitle>
+          <AlertDialogDescription>{plan?.merges.length ? t('tidyMergeHint') : t('tidyNoMerge')}</AlertDialogDescription>
+        </AlertDialogHeader>
+        {plan?.merges.map(([from, to]) => (
+          <label key={from} className="flex items-center gap-2">
+            <input type="checkbox" className="size-4 accent-primary" checked={!skip.has(from)} onChange={() => toggle(from)} />
+            <TopicDot cat={from} /><span>{from}</span><span className="text-xs text-muted-foreground tabular-nums">{counts[from]}</span>
+            <ArrowRight className="size-3.5 text-muted-foreground" />
+            <TopicDot cat={to} /><span>{to}</span><span className="text-xs text-muted-foreground tabular-nums">{counts[to]}</span>
+          </label>
+        ))}
+        <div className="flex flex-col gap-1 border-t pt-3">
+          <span className="text-xs text-muted-foreground">{t('tidyDefs')}</span>
+          {Object.entries(plan?.defs ?? {}).filter(([c]) => !gone.has(c)).map(([c, d]) => (
+            <p key={c}><span className="font-medium">{c}</span><span className="text-muted-foreground"> · {d}</span></p>
+          ))}
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={close}>{t('cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={() => plan && applyTidy(merges, plan.defs)}>{t('tidyApply')}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

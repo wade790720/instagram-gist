@@ -144,17 +144,20 @@ export function itemText(x: Item, max = 300) {
 // The model names categories freely only when nothing constrains it, and the first batch's style then
 // sticks: one run gave 2-character names, the next 4-character ones. So the list is fixed: the
 // user's own categories once there are any, the starting list before that.
-export function categorizePrompt(items: Item[], cats: string[], l: string) {
+// defs: one-line topic definitions from "Tidy topics", so neighbouring topics keep the same edges each run.
+export function categorizePrompt(items: Item[], cats: string[], l: string, max = 300, defs: Record<string, string> = {}) {
   const L = lang(l);
   const list = cats.length ? cats : [...L.topics, L.other];
   return [
     'Sort these Instagram items (followed accounts or saved posts) into broad topic categories.',
-    `- Pick each item's category from this list: ${list.join(', ')}`,
+    ...(list.some(c => defs[c])
+      ? ["- Pick each item's category from this list. A name may be followed by what belongs in it:", ...list.map(c => (defs[c] ? `  ${c}: ${defs[c]}` : `  ${c}`))]
+      : [`- Pick each item's category from this list: ${list.join(', ')}`]),
     `- Only when an item fits none of them, create a new category in ${L.name}, ${L.length}, in the same style as the list.`,
     `- Use "${L.other}" when you cannot tell.`,
     'Return only a JSON object that maps every item number to one category, e.g. {"1": "...", "2": "..."}.',
     '',
-    ...items.map((x, i) => `${i + 1}. ${itemText(x)}`),
+    ...items.map((x, i) => `${i + 1}. ${itemText(x, max)}`),
   ].join('\n');
 }
 
@@ -220,6 +223,76 @@ export function renameCat(items: Tagged[], summaries: Summaries, from: string, t
     delete summaries[from];
   }
   return n;
+}
+
+// A topic with SMALL items or fewer clutters the sidebar (喜劇, 玩具…): after each sort, the model
+// moves it into a similar big topic (娛樂). "Other" and the friend label never take part.
+// Only topics with an AI-placed item count as small: hand-picked items stay where the user put them.
+const SMALL = 5;
+export function smallTopics(items: Tagged[], l: string) {
+  const L = lang(l);
+  const counts = groupCounts(items).filter(([c]) => c !== L.other && c !== L.friends);
+  const big = counts.filter(([, n]) => n > SMALL).map(([c]) => c);
+  const small = counts.filter(([c, n]) => n <= SMALL && items.some(x => x.cat === c && !x.manual)).map(([c]) => c);
+  return { small: big.length ? small : [], big };
+}
+
+export function mergePrompt(small: string[], big: string[], l: string) {
+  return [
+    'These are topic categories for Instagram items. The small ones should join a similar big one.',
+    '- For each small category, pick the most similar big category, e.g. comedy or toys -> entertainment.',
+    '- If no big category is clearly similar, use "".',
+    `- Answer with big category names exactly as written (they are in ${lang(l).name}).`,
+    'Return only a JSON object that maps every small category to a big category or "", e.g. {"A": "B", "C": ""}.',
+    '',
+    `Big categories: ${big.join(', ')}`,
+    `Small categories: ${small.join(', ')}`,
+  ].join('\n');
+}
+
+// Moves the AI-placed items of each small topic into its big topic; unknown answers are ignored.
+// A topic left with no items hands its digests to the big topic, as renameCat does.
+export function mergeSmall(items: Tagged[], summaries: Summaries, map: Record<string, unknown>, big: string[]) {
+  let n = 0;
+  for (const [from, to] of Object.entries(map)) {
+    if (typeof to !== 'string' || !big.includes(to) || to === from) continue;
+    for (const x of items) if (x.cat === from && !x.manual) { x.cat = to; n++; }
+    if (summaries[from] && !items.some(x => x.cat === from)) {
+      summaries[to] = [...(summaries[to] || []), ...summaries[from]];
+      delete summaries[from];
+    }
+  }
+  return n;
+}
+
+// "Tidy topics": one call reads every topic with a few example items, proposes merges of topics that
+// mean the same area, and writes a one-line definition for each. Other and the friend label stay out.
+// items: saved posts first, so the examples carry captions rather than bare account names.
+const tidyNames = (items: Tagged[], l: string) => groupCounts(items).filter(([c]) => c !== lang(l).other && c !== lang(l).friends);
+export function tidyPrompt(items: Item[], l: string) {
+  const L = lang(l);
+  return [
+    'These are the topic categories a user sorts saved Instagram posts and followed accounts into.',
+    'Several overlap, so the same post lands in different ones from run to run. Make the edges clear.',
+    '- "merge": map a category to another category in the list only when a reader would see them as the same area (e.g. health and medicine). Keep the name with more items. Do not merge neighbours that are worth keeping apart.',
+    `- "defs": for every category in the list, one short line in ${L.name} that says what belongs in it (${l === 'zh' ? 'at most 25 characters' : 'at most 12 words'}), so neighbouring categories do not overlap.`,
+    'Return only JSON: {"merge": {"from": "to"}, "defs": {"category": "definition"}}.',
+    '',
+    ...tidyNames(items, l).map(([c, n]) => `${c} (${n} items): ${items.filter(x => x.cat === c).slice(0, 3).map(x => itemText(x, 80)).join(' / ')}`),
+  ].join('\n');
+}
+
+// Keeps only usable answers: merges between two listed topics (no chains), definitions of listed topics.
+export function parseTidy(answer: Record<string, unknown>, items: Tagged[], l: string) {
+  const names = tidyNames(items, l).map(([c]) => c);
+  const obj = (v: unknown) => (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  const merges = Object.entries(obj(answer.merge))
+    .filter((e): e is [string, string] => typeof e[1] === 'string' && e[0] !== e[1] && names.includes(e[0]) && names.includes(e[1]));
+  const froms = new Set(merges.map(([f]) => f));
+  const defs = Object.fromEntries(Object.entries(obj(answer.defs))
+    .filter((e): e is [string, string] => names.includes(e[0]) && typeof e[1] === 'string' && !!e[1].trim())
+    .map(([c, d]) => [c, clip(d.trim(), 60)]));
+  return { merges: merges.filter(([, to]) => !froms.has(to)), defs };
 }
 
 // Delete a topic: its items go back to unsorted (and lose the manual flag), so the next sort
