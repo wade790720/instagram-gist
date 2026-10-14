@@ -6,14 +6,15 @@ import { buildReport, getReporting, setReporting, SUPPORT_EMAIL } from '@/lib/er
 // Error reporting UI for settings: the report button and the automatic sending switch (on by default).
 // Same file in instagram-gist, jev-model-router and
 // brand-digest-extension (change all three), so it carries its own zh/en text.
-const zh = navigator.language.toLowerCase().startsWith('zh');
-const text = zh ? {
-  label: '回報問題', done: `已複製診斷資料，寄到 ${SUPPORT_EMAIL}`, subject: '問題回報', auto: '自動傳送錯誤報告',
-} : {
-  label: 'Report a problem', done: `Report copied. Send it to ${SUPPORT_EMAIL}`, subject: 'Problem report', auto: 'Send error reports automatically',
+// lang: the app's own language setting, if it has one; without it, the browser language decides.
+const TEXT = {
+  zh: { label: '回報問題', done: `已複製診斷資料，寄到 ${SUPPORT_EMAIL}`, subject: '問題回報', auto: '自動傳送錯誤報告' },
+  en: { label: 'Report a problem', done: `Report copied. Send it to ${SUPPORT_EMAIL}`, subject: 'Problem report', auto: 'Send error reports automatically' },
 };
+const browserLang = () => (navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en');
 
-export function ReportProblem({ size = 'default' }: { size?: 'default' | 'sm' }) {
+export function ReportProblem({ size = 'default', lang }: { size?: 'default' | 'sm'; lang?: 'zh' | 'en' }) {
+  const text = TEXT[lang ?? browserLang()];
   const [done, setDone] = useState(false);
   const [auto, setAuto] = useState<boolean | null>(null);
   useEffect(() => { getReporting().then((c) => setAuto(c !== 'off')); }, []);

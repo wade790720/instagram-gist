@@ -5,22 +5,27 @@ import { check, COMMUNITY_URL, type Status } from '@/lib/membership';
 
 // Shows the tool only to Skool community members. Same file in instagram-gist, jev-model-router and
 // brand-digest-extension (change all three), so it carries its own zh/en text instead of each app's i18n.
-const zh = navigator.language.toLowerCase().startsWith('zh');
-const text = zh ? {
-  checking: '確認會員身分中…',
-  'signed-out': ['請先登入 Skool', '這個工具只開放給百寶袋俱樂部的會員。請在 Skool 登入，再回到這個分頁。', '登入 Skool'],
-  'not-member': ['需要加入百寶袋俱樂部', '目前登入的 Skool 帳號不是會員。加入後回到這個分頁就能使用。', '加入百寶袋俱樂部'],
-  unknown: ['暫時無法確認會員身分', '連不上 Skool，或 Skool 的頁面改版了。請稍後再試。', '打開 Skool'],
-  retry: '重新檢查',
-} : {
-  checking: 'Checking your membership…',
-  'signed-out': ['Sign in to Skool first', 'This tool is for Wonder Pocket Club members. Sign in on Skool, then come back to this tab.', 'Sign in to Skool'],
-  'not-member': ['Join Wonder Pocket Club', 'The Skool account you are signed in with is not a member. Join, then come back to this tab.', 'Join Wonder Pocket Club'],
-  unknown: ['Can’t confirm your membership', 'Skool is unreachable, or its page changed. Try again later.', 'Open Skool'],
-  retry: 'Check again',
-};
+// lang: the app's own language setting, if it has one; without it, the browser language decides.
+const TEXT = {
+  zh: {
+    checking: '確認會員身分中…',
+    'signed-out': ['請先登入 Skool', '這個工具只開放給百寶袋俱樂部的會員。請在 Skool 登入，再回到這個分頁。', '登入 Skool'],
+    'not-member': ['需要加入百寶袋俱樂部', '目前登入的 Skool 帳號不是會員。加入後回到這個分頁就能使用。', '加入百寶袋俱樂部'],
+    unknown: ['暫時無法確認會員身分', '連不上 Skool，或 Skool 的頁面改版了。請稍後再試。', '打開 Skool'],
+    retry: '重新檢查',
+  },
+  en: {
+    checking: 'Checking your membership…',
+    'signed-out': ['Sign in to Skool first', 'This tool is for Wonder Pocket Club members. Sign in on Skool, then come back to this tab.', 'Sign in to Skool'],
+    'not-member': ['Join Wonder Pocket Club', 'The Skool account you are signed in with is not a member. Join, then come back to this tab.', 'Join Wonder Pocket Club'],
+    unknown: ['Can’t confirm your membership', 'Skool is unreachable, or its page changed. Try again later.', 'Open Skool'],
+    retry: 'Check again',
+  },
+} as const;
+const browserLang = () => (navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en');
 
-export function MembershipGate({ children }: { children: ReactNode }) {
+export function MembershipGate({ children, lang }: { children: ReactNode; lang?: 'zh' | 'en' }) {
+  const text = TEXT[lang ?? browserLang()];
   const [status, setStatus] = useState<Status | null>(null);
   const run = (force = false) => { setStatus(null); check(force).then(setStatus); };
   useEffect(() => { check().then(setStatus); }, []);
