@@ -3,7 +3,11 @@
 // skool.com session (needs a skool.com host permission) and read the JSON that
 // Next.js embeds in it. Skool can change that page at any time; parse() then throws.
 // The same file lives in instagram-gist, jev-model-router and brand-digest-extension: change all three.
-export const COMMUNITY_URL = 'https://www.skool.com/forge-1085/about';
+export const COMMUNITY_URL = 'https://www.skool.com/wonderpocket/about';
+// The community moved from /forge-1085 to /wonderpocket. Keep the old address as a fallback, so the
+// check works before, during and after the rename, whether or not Skool redirects.
+// ponytail: drop the old address once the rename has been live for a while.
+const PAGES = [COMMUNITY_URL, 'https://www.skool.com/forge-1085/about'];
 const GROUP_ID = '998361e5ef944ec4a6937379dd581002';
 // ponytail: whitelist of roles seen so far; add the moderator role name once we see it.
 const ROLES = ['member', 'group-admin'];
@@ -30,14 +34,21 @@ export async function check(force = false): Promise<Status> {
   const saved = (await chrome.storage.local.get([KEY]))[KEY] as Saved | undefined;
   const now = Date.now();
   if (!force && saved?.status === 'member' && now - saved.at < RECHECK_MS) return 'member';
-  try {
-    const res = await fetch(COMMUNITY_URL, { credentials: 'include' });
-    if (!res.ok) throw new Error(`Skool ${res.status}`);
-    const status = parse(await res.text());
-    await chrome.storage.local.set({ [KEY]: { status, at: now, okAt: status === 'member' ? now : undefined } satisfies Saved });
-    return status;
-  } catch {
+  // A member on either page is a member; otherwise keep the first answer a page gave.
+  let status: Exclude<Status, 'unknown'> | undefined;
+  for (const url of PAGES) {
+    try {
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) continue;
+      const s = parse(await res.text());
+      status ??= s;
+      if (s === 'member') { status = s; break; }
+    } catch { /* try the next address */ }
+  }
+  if (!status) {
     // Network down or Skool changed: fail closed, except for a member confirmed in the last few days.
     return saved?.okAt && now - saved.okAt < GRACE_MS ? 'member' : 'unknown';
   }
+  await chrome.storage.local.set({ [KEY]: { status, at: now, okAt: status === 'member' ? now : undefined } satisfies Saved });
+  return status;
 }

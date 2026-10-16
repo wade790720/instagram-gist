@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
-import { parse } from './membership';
+import { expect, test, vi } from 'vitest';
+import { check, parse } from './membership';
 
 const GROUP = '998361e5ef944ec4a6937379dd581002';
 const page = (pageProps: unknown) =>
@@ -21,4 +21,18 @@ test('everyone else is kept out', () => {
 test('a page we do not understand is an error, not a verdict', () => {
   expect(() => parse('<html>maintenance</html>')).toThrow();
   expect(() => parse(page(undefined))).toThrow();
+});
+
+test('during the Skool rename, a member is found on the old address when the new one is missing', async () => {
+  vi.stubEnv('DEV', false);
+  vi.stubGlobal('chrome', { storage: { local: { get: async () => ({}), set: async () => {} } } });
+  const urls: string[] = [];
+  vi.stubGlobal('fetch', async (url: string) => {
+    urls.push(url);
+    return url.includes('/wonderpocket/') ? new Response('not found', { status: 404 }) : new Response(self({ role: 'member', groupId: GROUP }));
+  });
+  expect(await check(true)).toBe('member');
+  expect(urls).toEqual(['https://www.skool.com/wonderpocket/about', 'https://www.skool.com/forge-1085/about']);
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
