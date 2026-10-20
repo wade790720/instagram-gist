@@ -14,6 +14,7 @@ import { ListView } from './components/ListView';
 import { SettingsView } from './components/SettingsView';
 import { Sidebar } from './components/Sidebar';
 import { TopicDot } from './components/TopicDot';
+import { onboarded, Welcome } from './components/Welcome';
 
 const TAB_LABEL = { following: 'tabFollowing', saved: 'tabSaved', digests: 'tabBookmarks', settings: 'tabSettings' } as const;
 
@@ -35,7 +36,7 @@ export function App() {
           <div ref={scroller} data-scroller onScroll={e => setTop(e.currentTarget.scrollTop > e.currentTarget.clientHeight)}
             className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
             {tab === 'following' || tab === 'saved'
-              ? <ListView key={`${tab}|${ui.view.cat}|${ui.view.q}`} tab={tab} />
+              ? (onboarded() ? <ListView key={`${tab}|${ui.view.cat}|${ui.view.q}`} tab={tab} /> : <Welcome />)
               : tab === 'digests' ? <DigestsView /> : <SettingsView key="settings" />}
           </div>
           <StatusBar />
@@ -70,7 +71,8 @@ function Header() {
         </>}
         {count !== null && <span className="ml-1 text-xs font-normal text-muted-foreground tabular-nums">{count}</span>}
       </nav>
-      {untagged > 0 && !!db.settings.apiKey && (
+      {/* During onboarding, step 3 has its own sort button for all items. */}
+      {untagged > 0 && onboarded() && (
         <Button size="sm" variant="outline" className="h-7" disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
       )}
       {tab === 'following' && <ViewToggle />}

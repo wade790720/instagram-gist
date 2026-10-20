@@ -14,6 +14,8 @@ export interface DB {
   lastSync: { saved?: number; following?: number };
   /** Topic -> one-line definition from "Tidy topics", sent with every sort. */
   defs: Record<string, string>;
+  /** Club line after the first sort: true = show, false = closed, missing = not reached yet. */
+  clubHint?: boolean;
   /** A suspiciously short following count, refused once (see sync). */
   shortFollowing?: number;
 }

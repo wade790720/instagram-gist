@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { TopicDot } from './TopicDot';
+import { CLASSROOM_URL } from './ClubLink';
 
 const postUrl = (code: string) => `https://www.instagram.com/p/${code}/`;
 
@@ -92,6 +93,7 @@ export function DigestsView() {
           <TopicDigests cat={cat} />
         </section>
       ))}
+      <a href={CLASSROOM_URL} target="_blank" rel="noreferrer" className="px-1 text-sm text-muted-foreground underline">{t('nextStep')}</a>
     </div>
   );
 }

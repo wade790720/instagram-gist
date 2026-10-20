@@ -98,6 +98,7 @@ async function fetchAvatars() {
 }
 
 export async function categorize() {
+  const first = !allItems().some(x => x.cat); // for the one-time club line after the first sort
   const cats = () => Core.groupCounts(allItems()).map(([c]) => c);
   // Following first: it is cheap (only @name + display name, so 400 per call) and a quota
   // error during saved posts would otherwise leave it untouched. Saved posts carry captions: 150 per call.
@@ -115,6 +116,8 @@ export async function categorize() {
       emit();
     }
   }
+  if (first && db.clubHint === undefined && allItems().some(x => x.cat)) { db.clubHint = true; await save(); }
+
   // One extra call: topics with 5 items or fewer join a similar big topic (喜劇 -> 娛樂).
   // ponytail: asks again on every run while a small topic has no similar big one; cheap on the lite model.
   const { small, big } = Core.smallTopics(allItems(), db.settings.lang);
@@ -140,6 +143,13 @@ export const tidyTopics = () => run(async () => {
 });
 
 /** merges: the ones the user left ticked. Merging works like renaming onto an existing topic. */
+/** The one-time club line after the first sort: closed for good. */
+export async function hideClubHint() {
+  db.clubHint = false;
+  await save();
+  emit();
+}
+
 export async function applyTidy(merges: [string, string][], defs: Record<string, string>) {
   ui.tidy = null;
   for (const [from, to] of merges) {
@@ -277,6 +287,5 @@ export async function load() {
   if (/^gemini-2\./.test(db.settings.model)) db.settings.model = DEFAULTS.model;
   // Follows stored before the friend rule (private/verified) or avatars (pic) lack fields: refetch on the next Sync.
   if (db.following.length && (db.following[0].private === undefined || db.following[0].pic === undefined)) db.lastSync.following = 0;
-  if (!db.settings.apiKey) ui.view.tab = 'settings';
   ui.status = t('lastSync', when(db.lastSync.saved), when(db.lastSync.following));
 }

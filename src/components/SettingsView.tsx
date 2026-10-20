@@ -7,6 +7,7 @@ import { db, ui } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ReportProblem } from '@/components/ReportProblem';
+import { ClubLink } from '@/components/ClubLink';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Local form state, so a background sync re-render never wipes a half-typed API key.
@@ -45,6 +46,8 @@ export function SettingsView() {
           <ReportProblem />
         </div>
       </section>
+
+      <ClubLink className="border-t pt-8" />
     </div>
   );
 }

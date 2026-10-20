@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_appName__",
   "description": "__MSG_appDesc__",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "default_locale": "en",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "unlimitedStorage", "scripting"],
@@ -10,8 +10,7 @@
     "https://www.instagram.com/*",
     "https://*.cdninstagram.com/*",
     "https://*.fbcdn.net/*",
-    "https://generativelanguage.googleapis.com/*",
-    "https://www.skool.com/*"
+    "https://generativelanguage.googleapis.com/*"
   ],
   "background": { "service_worker": "background.js" },
   "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },

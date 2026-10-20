@@ -1,10 +1,11 @@
 import { BadgeCheck, RefreshCw } from 'lucide-react';
 import * as Core from '@/core';
 import type { Post, User } from '@/core';
-import { sync } from '@/lib/actions';
+import { hideClubHint, sync } from '@/lib/actions';
 import { t } from '@/lib/i18n';
 import { allItems, db, ui } from '@/lib/store';
 import { Button } from '@/components/ui/button';
+import { ClubLink } from './ClubLink';
 import { Empty, TopicDigests } from './Digests';
 import { Avatar, TopicPicker, useProgressive } from './ItemParts';
 import { SavedGrid } from './SavedGrid';
@@ -22,13 +23,17 @@ export function ListView({ tab }: { tab: 'following' | 'saved' }) {
   // Topics from both lists, so an account can move into a topic that so far only has posts.
   const cats = Core.groupCounts(allItems()).map(([c]) => c);
 
+  // Shown once, above the first sorted results; closing it hides it for good.
+  const club = db.clubHint && <ClubLink className="border-b px-6 py-3" onClose={hideClubHint} />;
+
   if (tab === 'saved') return (
     <>
+      {club}
       {cat && <div className="border-b px-6 py-4"><TopicDigests cat={cat} /></div>}
       <SavedGrid posts={shown as Post[]} cats={cats} />
     </>
   );
-  return db.settings.followView === 'list' ? <UserRows users={shown as User[]} cats={cats} /> : <UserGrid users={shown as User[]} cats={cats} />;
+  return <>{club}{db.settings.followView === 'list' ? <UserRows users={shown as User[]} cats={cats} /> : <UserGrid users={shown as User[]} cats={cats} />}</>;
 }
 
 function UserRows({ users, cats }: { users: User[]; cats: string[] }) {

@@ -19,6 +19,5 @@ document.documentElement.lang = chrome.i18n.getUILanguage();
 // Imported after the mock: store.ts reads chrome.i18n at load.
 const { load } = await import('./lib/actions');
 const { App } = await import('./App');
-const { MembershipGate } = await import('./components/MembershipGate');
 await load();
-createRoot(document.getElementById('root')!).render(<StrictMode><MembershipGate><App /></MembershipGate></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);

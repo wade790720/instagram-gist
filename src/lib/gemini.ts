@@ -40,3 +40,19 @@ export async function gemini(prompt: string, json: boolean, model: string, fallb
     throw new Error(`Gemini ${r.status}: ${msg}`);
   }
 }
+
+// Onboarding: listing one model costs no quota and proves the key works before it is saved.
+// Returns '' when the key works, else a reason in plain words.
+export async function checkKey(key: string): Promise<string> {
+  let r: Response;
+  try {
+    r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1', { headers: { 'x-goog-api-key': key } });
+  } catch {
+    return t('keyOffline');
+  }
+  if (r.ok) return '';
+  if (r.status === 400 || r.status === 401) return t('keyBad');
+  if (r.status === 403) return t('keyDenied');
+  if (r.status === 429) return t('keyBusy');
+  return t('keyOther', r.status);
+}
