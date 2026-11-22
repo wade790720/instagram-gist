@@ -16,6 +16,8 @@ export interface DB {
   defs: Record<string, string>;
   /** Club line after the first sort: true = show, false = closed, missing = not reached yet. */
   clubHint?: boolean;
+  /** The three-step onboarding was finished once (see Welcome's onboarded). */
+  onboarded?: boolean;
   /** A suspiciously short following count, refused once (see sync). */
   shortFollowing?: number;
 }
@@ -60,7 +62,7 @@ const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f
 export const useStore = () => useSyncExternalStore(subscribe, () => version);
 
 /** The app's own storage keys. error-log shares chrome.storage (consent, log), so load and clear touch only these. */
-export const DB_KEYS = ['following', 'saved', 'summaries', 'settings', 'lastSync', 'defs', 'clubHint', 'shortFollowing'] as const satisfies readonly (keyof DB)[];
+export const DB_KEYS = ['following', 'saved', 'summaries', 'settings', 'lastSync', 'defs', 'clubHint', 'onboarded', 'shortFollowing'] as const satisfies readonly (keyof DB)[];
 export const save = () => chrome.storage.local.set({ ...db });
 export const status = (msg: string, err = false) => { Object.assign(ui, { status: msg, err }); emit(); };
 export const setView = (v: Partial<typeof ui.view>) => { Object.assign(ui.view, v); emit(); };

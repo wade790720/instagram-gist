@@ -14,6 +14,17 @@ test('save keeps the error-report choice made after load', async () => {
   assert.equal((await chrome.storage.local.get(null)).errorReporting, 'off');
 });
 
+test('onboarding stays done after "Re-sort everything" leaves nothing sorted', async () => {
+  const { load } = await import('./actions');
+  const { allItems, db } = await import('./store');
+  const { onboarded } = await import('@/components/Welcome');
+  await load(); // mock data: a key and sorted items
+  assert.ok(onboarded());
+  for (const x of allItems()) delete x.cat; // re-sort cleared them, then the quota ran out
+  assert.ok(onboarded());
+  assert.equal(db.onboarded, true); // stored, so a reload keeps it
+});
+
 test('"Delete all data" keeps the error-report choice and the settings', async () => {
   const { clearAll } = await import('./actions');
   const { ui } = await import('./store');

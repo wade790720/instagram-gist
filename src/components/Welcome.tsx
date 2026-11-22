@@ -10,8 +10,9 @@ import { Input } from '@/components/ui/input';
 
 type State = 'done' | 'now' | 'later';
 
-/** First run is over once there is a key and at least one sorted item. Until then the lists show Welcome. */
-export const onboarded = () => !!db.settings.apiKey && allItems().some(x => x.cat);
+/** First run is over once there is a key and at least one sorted item. Until then the lists show Welcome.
+ * Remembered (saved with db), so a re-sort that ends with nothing sorted (quota out) never hides the data again. */
+export const onboarded = () => !!db.settings.apiKey && (db.onboarded ||= allItems().some(x => x.cat));
 
 // Same three-step look as Creator Digest: done is ticked, the current step is open, later ones are faded.
 function Step({ n, title, state, children }: { n: number; title: string; state: State; children?: ReactNode }) {
