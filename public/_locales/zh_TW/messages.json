@@ -34,6 +34,7 @@
   "moveTo": { "message": "分類" },
   "unsorted": { "message": "未分類" },
   "verified": { "message": "已驗證" },
+  "openSource": { "message": "$1：開啟 @$2 的收藏貼文" },
   "viewAs": { "message": "檢視方式" },
   "viewGrid": { "message": "格狀" },
   "viewList": { "message": "列表" },

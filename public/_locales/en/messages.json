@@ -34,6 +34,7 @@
   "moveTo": { "message": "Topic" },
   "unsorted": { "message": "Not sorted" },
   "verified": { "message": "Verified" },
+  "openSource": { "message": "$1: open @$2’s saved post" },
   "viewAs": { "message": "View" },
   "viewGrid": { "message": "Grid" },
   "viewList": { "message": "List" },
