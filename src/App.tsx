@@ -105,8 +105,9 @@ function ViewToggle() {
 function StatusBar() {
   const p = ui.progress;
   return (
-    <footer role="status" className="flex h-8 shrink-0 items-center gap-3 border-t px-6 text-xs">
-      <span className={cn('min-w-0 flex-1 truncate', ui.err ? 'text-destructive' : 'text-muted-foreground')} title={ui.status}>{ui.status}</span>
+    <footer role="status" className="flex min-h-8 shrink-0 items-center gap-3 border-t px-6 py-1.5 text-xs">
+      {/* An error wraps in full: its last sentence is the way out. Progress text stays on one line. */}
+      <span className={cn('min-w-0 flex-1', ui.err ? 'text-destructive' : 'truncate text-muted-foreground')} title={ui.status}>{ui.status}</span>
       {p !== null && (
         <span className="relative h-1 w-32 shrink-0 overflow-hidden rounded-full bg-muted" aria-hidden>
           {p === 'busy'
