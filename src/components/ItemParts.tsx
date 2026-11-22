@@ -43,7 +43,7 @@ export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: st
       <DropdownMenuTrigger asChild>
         <button type="button" className={cls} aria-label={t('moveTo')}>{label}</button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="max-h-80 w-48 overflow-y-auto">
+      <DropdownMenuContent align="end" className="max-h-80 w-48 overflow-y-auto overscroll-contain">
         {cats.map(c => (
           <DropdownMenuItem key={c} onSelect={() => moveItem(x, c)}>
             <TopicDot cat={c} />

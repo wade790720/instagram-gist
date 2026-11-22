@@ -133,7 +133,7 @@ function TidyDialog() {
 
   return (
     <AlertDialog open={!!plan} onOpenChange={o => { if (!o) close(); }}>
-      <AlertDialogContent className="max-h-[85vh] overflow-y-auto">
+      <AlertDialogContent className="max-h-[85vh] overflow-y-auto overscroll-contain">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-base">{t('tidy')}</AlertDialogTitle>
           <AlertDialogDescription>{plan?.merges.length ? t('tidyMergeHint') : t('tidyNoMerge')}</AlertDialogDescription>
