@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Post } from '@/core';
 import { t } from './i18n';
-import { db, emit, status, ui } from './store';
+import { db, status, ui } from './store';
 
 // Post covers live in the Cache API, not chrome.storage: ~500 images (~25 MB) would otherwise be
 // read into memory on every page load. Each card reads only its own image, when it mounts.
@@ -36,9 +36,6 @@ export async function coverJobs() {
     if (r.ok) await cache.put(key(p.id), r);
   });
 }
-
-/** After new covers are cached: mounted cards look in the cache again. */
-export const coversChanged = () => { ui.thumbs++; emit(); };
 
 export const clearThumbs = () => caches.delete(CACHE);
 

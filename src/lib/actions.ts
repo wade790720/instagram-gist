@@ -4,7 +4,7 @@ import { record } from './error-log';
 import { gemini } from './gemini';
 import { t, when } from './i18n';
 import { fromIg } from './ig';
-import { clearThumbs, coverJobs, coversChanged, pool } from './thumbs';
+import { clearThumbs, coverJobs, pool } from './thumbs';
 import { allItems, ask, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui } from './store';
 
 const DAY = 864e5;
@@ -14,7 +14,9 @@ export async function run(fn: () => Promise<void>) {
   if (ui.busy) return;
   Object.assign(ui, { busy: true, progress: 'busy' });
   emit();
-  try { await fn(); } catch (e) {
+  try {
+    await fn();
+  } catch (e) {
     status(t('error', (e as Error).message), true);
     // Caught here, so the global handlers never see it: send it to the error inbox too (IG or Gemini changes show up here first).
     void record(e, 'action').catch(() => {});
@@ -63,10 +65,11 @@ export const sync = () => run(async () => {
   }
   await save();
   // Avatars and covers both come from IG's CDN and do not wait on each other: one pool, one progress count.
-  const avatarJobs = avatarDownloads(), covers = await coverJobs();
+  const avatarJobs = avatarDownloads();
+  const covers = await coverJobs();
   await pool([...avatarJobs, ...covers], job => job(), 'syncingImages');
   if (avatarJobs.length) await chrome.storage.local.set({ avatars });
-  if (covers.length) coversChanged();
+  if (covers.length) { ui.thumbs++; emit(); } // mounted cards look in the cache again
   if (!db.settings.apiKey) return status(t('needKey'));
   await categorize();
   status(t('synced', new Date().toLocaleTimeString()));

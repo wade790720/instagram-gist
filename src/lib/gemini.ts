@@ -37,7 +37,7 @@ export async function gemini(prompt: string, json: boolean, model: string, fallb
     }
     // Only call it the daily quota when Google gave a long retryDelay; otherwise show its text.
     if (r.status === 429 && told && wait > 90) throw new Error(t('quotaOut', model, Math.ceil(wait / 3600)));
-    throw new Error(t('geminiFailed', r.status, msg)); // Google's text names the cause; ours names the way out
+    throw new Error(t('geminiFailed', r.status, msg));
   }
 }
 

@@ -22,7 +22,6 @@ function DigestText({ d }: { d: Digest }) {
         const n = part.match(/^\[(\d+)\]$/)?.[1];
         const p = n ? db.saved.find(x => x.id === d.sourceIds[Number(n) - 1]) : undefined;
         return p
-          // The name starts with the visible "[n]" and says whose post opens: a links list of bare numbers means nothing.
           ? <a key={k} href={postUrl(p.code)} target="_blank" rel="noreferrer" aria-label={t('openSource', part, p.user)} className="rounded px-0.5 text-xs font-medium text-primary-text tabular-nums hover:bg-primary/10">{part}</a>
           : part;
       })}
