@@ -147,7 +147,6 @@ export const tidyTopics = () => run(async () => {
   status('');
 });
 
-/** merges: the ones the user left ticked. Merging works like renaming onto an existing topic. */
 /** The one-time club line after the first sort: closed for good. */
 export async function hideClubHint() {
   db.clubHint = false;
@@ -155,6 +154,7 @@ export async function hideClubHint() {
   emit();
 }
 
+/** merges: the ones the user left ticked. Merging works like renaming onto an existing topic. */
 export async function applyTidy(merges: [string, string][], defs: Record<string, string>) {
   ui.tidy = null;
   for (const [from, to] of merges) {
