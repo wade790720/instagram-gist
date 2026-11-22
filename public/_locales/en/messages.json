@@ -109,9 +109,5 @@
   "confirmClear": { "message": "Delete all synced lists and digests? Settings are kept." },
   "lastSync": { "message": "Last sync — saved: $1 · following: $2" },
   "never": { "message": "never" },
-  "type_image": { "message": "Image" },
-  "type_video": { "message": "Reel" },
-  "type_carousel": { "message": "Carousel" },
-  "type_post": { "message": "Post" },
   "nextStep": { "message": "Next: you know what you save most. Turn it into a direction → Wonder Pocket Club classroom, Lv1 \"See yourself in your saves\"" }
 }

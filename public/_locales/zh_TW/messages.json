@@ -109,9 +109,5 @@
   "confirmClear": { "message": "確定刪除所有同步的清單和摘要？設定會保留。" },
   "lastSync": { "message": "上次同步：收藏 $1 · 追蹤 $2" },
   "never": { "message": "從未" },
-  "type_image": { "message": "圖片" },
-  "type_video": { "message": "Reels" },
-  "type_carousel": { "message": "輪播" },
-  "type_post": { "message": "貼文" },
   "nextStep": { "message": "下一步：知道自己最常收藏什麼了，把它變成方向 → Wonder Pocket Club 課程 Lv1「從收藏看見自己」" }
 }
