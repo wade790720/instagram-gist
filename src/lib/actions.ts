@@ -171,7 +171,7 @@ export const summarize = (cat: string, i?: number, note = '', asNew = false) => 
   const posts = Core.orderSources(old?.sourceIds || [], db.saved.filter(x => x.cat === cat));
   const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang, notes, old?.text), false, db.settings.summaryModel, db.settings.model);
   // A blocked prompt returns no text; saving it would wipe the old digest and mark it up to date.
-  if (!text.trim()) throw new Error('Gemini: empty response');
+  if (!text.trim()) throw new Error(t('digestEmpty'));
   const next: Digest = { id: old && !asNew ? old.id : Date.now().toString(36), title: asNew ? note.trim() : old?.title, text, sourceIds: posts.map(p => p.id), notes, at: Date.now() };
   if (asNew) {
     list.push(next);

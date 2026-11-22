@@ -68,6 +68,6 @@ export async function fromIg<T>(kind: Kind, known: string[], maxPages: number, r
   }
   // Chrome has no InjectionResult.error: if igFetch throws, result is just null.
   if (!result) throw new Error(t('igFailed'));
-  if (result.error) throw new Error(result.error === 'not_logged_in' ? t('loginFirst') : result.error);
+  if (result.error) throw new Error(result.error === 'not_logged_in' ? t('loginFirst') : t('igRefused', result.error));
   return result.items as T[];
 }
