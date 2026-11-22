@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TopicDot } from './TopicDot';
 
-const row = 'flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50';
+const row = 'flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring';
 
 export function Sidebar() {
   const { tab, cat } = ui.view;
@@ -93,7 +93,7 @@ function TopicRow({ cat, n, on }: { cat: string; n: number; on: boolean }) {
             <button aria-label={t('editCat', cat)} disabled={ui.busy}
               className={cn(
                 'absolute top-1/2 right-1 grid size-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground outline-none',
-                'transition-[opacity,scale,background-color] duration-150 ease-out hover:bg-foreground/10 hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 disabled:hidden',
+                'transition-[opacity,scale,background-color] duration-150 ease-out hover:bg-foreground/10 hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring disabled:hidden',
                 shown ? 'scale-100 opacity-100' : 'scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100',
               )}>
               <MoreHorizontal className="size-4" />

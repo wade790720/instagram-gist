@@ -51,7 +51,7 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
   return (
     <Collapsible open={ui.opened.has(key)} onOpenChange={o => { ui.opened[o ? 'add' : 'delete'](key); emit(); }}
       className="group/d rounded-lg border bg-card">
-      <CollapsibleTrigger className="flex h-11 w-full items-center gap-2 rounded-lg px-3 text-left outline-none hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/50">
+      <CollapsibleTrigger className="flex h-11 w-full items-center gap-2 rounded-lg px-3 text-left outline-none hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring">
         <ChevronRight className="size-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]/d:rotate-90" />
         <span className="flex-1 truncate font-medium">{d.title ? `${cat} · ${d.title}` : t('digestTitle', cat, d.sourceIds.length)}</span>
         {fresh > 0 && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary-text">+{fresh}</span>}
