@@ -148,7 +148,7 @@ export function itemText(x: Item, max = 300) {
 // sticks: one run gave 2-character names, the next 4-character ones. So the list is fixed: the
 // user's own categories once there are any, the starting list before that.
 // defs: one-line topic definitions from "Tidy topics", so neighbouring topics keep the same edges each run.
-export function categorizePrompt(items: Item[], cats: string[], l: string, max = 300, defs: Record<string, string> = {}) {
+export function categorizePrompt(items: Item[], cats: string[], l: string, defs: Record<string, string> = {}) {
   const L = lang(l);
   const list = cats.length ? cats : [...L.topics, L.other];
   return [
@@ -160,7 +160,7 @@ export function categorizePrompt(items: Item[], cats: string[], l: string, max =
     `- Use "${L.other}" when you cannot tell.`,
     'Return only a JSON object that maps every item number to one category, e.g. {"1": "...", "2": "..."}.',
     '',
-    ...items.map((x, i) => `${i + 1}. ${itemText(x, max)}`),
+    ...items.map((x, i) => `${i + 1}. ${itemText(x)}`),
   ].join('\n');
 }
 

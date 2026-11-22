@@ -143,9 +143,9 @@ assert.equal(pool.find(x => x.id === 'mx').cat, '玩具'); // hand-picked stays
 assert.deepEqual(Object.keys(smallSums), ['玩具', '娛樂']); // 喜劇 emptied: its digest moved; 玩具 keeps a manual item and its digest
 
 // categorizePrompt with definitions: one line per topic; without any, the plain comma list stays.
-const defined = C.categorizePrompt([post], ['心靈', '成長'], 'zh', 300, { 心靈: '情緒、療癒' });
+const defined = C.categorizePrompt([post], ['心靈', '成長'], 'zh', { 心靈: '情緒、療癒' });
 assert.match(defined, /\n  心靈: 情緒、療癒\n  成長\n/);
-assert.match(C.categorizePrompt([post], ['心靈', '成長'], 'zh', 300, { 其他: 'x' }), /from this list: 心靈, 成長\n/);
+assert.match(C.categorizePrompt([post], ['心靈', '成長'], 'zh', { 其他: 'x' }), /from this list: 心靈, 成長\n/);
 
 // parseTidy: merges only between listed topics, no chains, never other/friends; defs only for listed topics.
 const posts = (cat: string, n: number) => many(cat, n, { user: 'u', caption: 'text', alt: '' });
