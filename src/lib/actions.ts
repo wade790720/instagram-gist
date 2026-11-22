@@ -4,7 +4,7 @@ import { gemini } from './gemini';
 import { t, when } from './i18n';
 import { fromIg } from './ig';
 import { clearThumbs, fetchThumbs } from './thumbs';
-import { allItems, ask, avatars, db, DEFAULTS, emit, save, status, ui } from './store';
+import { allItems, ask, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui } from './store';
 
 const DAY = 864e5;
 
@@ -265,7 +265,8 @@ export async function clearAll() {
   if (ui.busy || !(await ask({ msg: t('confirmClear'), ok: t('clearData'), danger: true })) || ui.busy) return;
   Object.assign(db, { following: [] as User[], saved: [] as Post[], summaries: {}, lastSync: {}, defs: {} });
   for (const k of Object.keys(avatars)) delete avatars[k];
-  await chrome.storage.local.clear();
+  // Not clear(): that would also wipe error-log's consent, turning reporting back on. save() below keeps settings.
+  await chrome.storage.local.remove([...DB_KEYS, 'avatars']);
   await clearThumbs();
   await save();
   emit();
@@ -275,7 +276,8 @@ export async function clearAll() {
 export async function load() {
   const { avatars: stored, ...rest } = (await chrome.storage.local.get(null)) as Partial<typeof db> & { avatars?: Record<string, string> };
   Object.assign(avatars, stored);
-  Object.assign(db, rest);
+  // Copying other keys into db would make every save() write their load-time values back.
+  for (const k of DB_KEYS) if (k in rest) Object.assign(db, { [k]: rest[k] });
   // Settings saved before summaryModel existed used 3.8-flash for sorting too; move sorting to lite once.
   if (db.settings?.model && !db.settings.summaryModel && db.settings.model === 'gemini-3.8-flash') db.settings.model = DEFAULTS.model;
   db.settings = { ...DEFAULTS, ...db.settings };

@@ -44,6 +44,7 @@ Object.assign(globalThis, {
         get: async () => structuredClone(store),
         set: async (v: Record<string, unknown>) => { store = { ...store, ...structuredClone(v) }; },
         clear: async () => { store = {}; },
+        remove: async (keys: string[]) => { for (const k of keys) delete store[k]; },
       },
     },
   },
