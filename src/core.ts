@@ -104,7 +104,10 @@ export function markFriends(users: User[], followerIds: Set<string>, l: string) 
   const label = lang(l).friends;
   let n = 0;
   for (const u of users) {
-    if (u.manual || u.verified || !(u.private || followerIds.has(u.id))) continue;
+    if (u.manual) continue;
+    // keepCats carried yesterday's label over; drop it so ex-friends go back to the AI sort.
+    if (u.cat === label) delete u.cat;
+    if (u.verified || !(u.private || followerIds.has(u.id))) continue;
     u.cat = label;
     n++;
   }

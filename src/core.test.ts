@@ -34,9 +34,10 @@ const people = [
   { id: '3', private: false, verified: false, cat: '美髮' },    // stranger -> keeps AI topic
   { id: '4', private: true, verified: true, cat: '音樂' },      // verified -> never
   { id: '5', private: true, verified: false, cat: '滑雪', manual: true }, // hand-picked -> kept
+  { id: '6', private: false, verified: false, cat: '好友' },    // no longer follows back -> label dropped, AI re-sorts it
 ];
 assert.equal(C.markFriends(people, new Set(['2']), 'zh'), 2);
-assert.deepEqual(people.map(p => p.cat), ['好友', '好友', '美髮', '音樂', '滑雪']);
+assert.deepEqual(people.map(p => p.cat), ['好友', '好友', '美髮', '音樂', '滑雪', undefined]);
 
 // keepCats: unfollowed accounts disappear, surviving ones keep their tag.
 const old = [{ id: '1', cat: '美髮' }, { id: '2', cat: '滑雪' }];
