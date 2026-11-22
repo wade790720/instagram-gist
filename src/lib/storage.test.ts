@@ -28,7 +28,7 @@ test('onboarding stays done after "Re-sort everything" leaves nothing sorted', a
 test('pool runs every job once, skips failures, returns the count', async () => {
   const { pool } = await import('./thumbs');
   const seen: number[] = [];
-  const n = await pool([1, 2, 3, 4, 5, 6, 7, 8], async x => { if (x === 3) throw new Error('expired'); seen.push(x); }, 'syncingThumbs');
+  const n = await pool([1, 2, 3, 4, 5, 6, 7, 8], async x => { if (x === 3) throw new Error('expired'); seen.push(x); }, 'syncingImages');
   assert.equal(n, 8);
   assert.deepEqual(seen.sort(), [1, 2, 4, 5, 6, 7, 8]);
 });

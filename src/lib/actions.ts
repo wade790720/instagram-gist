@@ -4,7 +4,7 @@ import { record } from './error-log';
 import { gemini } from './gemini';
 import { t, when } from './i18n';
 import { fromIg } from './ig';
-import { clearThumbs, fetchThumbs, pool } from './thumbs';
+import { clearThumbs, coverJobs, coversChanged, pool } from './thumbs';
 import { allItems, ask, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui } from './store';
 
 const DAY = 864e5;
@@ -62,8 +62,11 @@ export const sync = () => run(async () => {
     db.lastSync.following = Date.now();
   }
   await save();
-  await fetchAvatars();
-  await fetchThumbs();
+  // Avatars and covers both come from IG's CDN and do not wait on each other: one pool, one progress count.
+  const avatarJobs = avatarDownloads(), covers = await coverJobs();
+  await pool([...avatarJobs, ...covers], job => job(), 'syncingImages');
+  if (avatarJobs.length) await chrome.storage.local.set({ avatars });
+  if (covers.length) coversChanged();
   if (!db.settings.apiKey) return status(t('needKey'));
   await categorize();
   status(t('synced', new Date().toLocaleTimeString()));
@@ -72,11 +75,11 @@ export const sync = () => run(async () => {
 // IG's CDN blocks <img> on other sites, and its URLs expire. host_permissions let the extension
 // fetch them, so each avatar is downloaded once and kept as a data URL under its own storage key.
 // ponytail: never refreshed once stored; a changed avatar stays old until "Delete all data".
-async function fetchAvatars() {
+function avatarDownloads() {
   const urls = new Map<string, string>();
   for (const p of db.saved) if (p.pic) urls.set(p.user, p.pic);
   for (const u of db.following) if (u.pic) urls.set(u.username, u.pic); // fresher than saved posts: wins
-  const total = await pool([...urls].filter(([name]) => !avatars[name]), async ([name, url]) => {
+  return [...urls].filter(([name]) => !avatars[name]).map(([name, url]) => async () => {
     const r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' });
     if (!r.ok) return;
     const blob = await r.blob();
@@ -85,8 +88,7 @@ async function fetchAvatars() {
       f.onload = () => res(f.result as string);
       f.readAsDataURL(blob);
     });
-  }, 'syncingAvatars');
-  if (total) await chrome.storage.local.set({ avatars });
+  });
 }
 
 export async function categorize() {

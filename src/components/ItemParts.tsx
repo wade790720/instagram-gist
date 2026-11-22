@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { TopicDot } from './TopicDot';
 
-// Stored data URL (see fetchAvatars); initial letter until it is downloaded.
+// Stored data URL (see avatarDownloads in actions.ts); initial letter until it is downloaded.
 export function Avatar({ name, className }: { name: string; className?: string }) {
   const src = avatars[name];
   return src
