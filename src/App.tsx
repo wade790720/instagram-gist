@@ -29,9 +29,9 @@ export function App() {
 
   return (
     <TooltipProvider delayDuration={400}>
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen overflow-hidden max-md:flex-col">
         <Sidebar />
-        <main className="relative flex min-w-0 flex-1 flex-col">
+        <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <Header />
           <div ref={scroller} data-scroller onScroll={e => setTop(e.currentTarget.scrollTop > e.currentTarget.clientHeight)}
             className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
@@ -62,7 +62,7 @@ function Header() {
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b px-6">
-      <nav className="flex min-w-0 flex-1 items-center gap-1.5 font-medium">
+      <nav className="flex min-w-0 flex-auto shrink-0 items-center gap-1.5 font-medium">
         <button className={cn('shrink-0', cat ? 'text-muted-foreground hover:text-foreground' : 'text-foreground')} onClick={() => setView({ cat: '' })}>{t(TAB_LABEL[tab])}</button>
         {cat && <>
           <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
@@ -77,7 +77,7 @@ function Header() {
       )}
       {tab === 'following' && <ViewToggle />}
       {list && (
-        <div className="relative w-64">
+        <div className="relative w-64 min-w-0 shrink-[4]">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input type="search" value={q} onChange={e => setView({ q: e.target.value })} placeholder={t('search')} aria-label={t('search')} className="h-7 pl-8 text-[13px]" />
         </div>

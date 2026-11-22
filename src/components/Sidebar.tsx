@@ -24,8 +24,9 @@ export function Sidebar() {
   ];
   const list = tab === 'following' || tab === 'saved' ? db[tab] : null;
 
+  // Below 768px (or a desktop window zoomed past it) the sidebar stacks on top, so content keeps the full width.
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
+    <aside className="flex w-60 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground max-md:max-h-[40dvh] max-md:w-full max-md:border-r-0 max-md:border-b">
       <div className="flex h-12 items-center gap-2 px-3">
         <img src="/icons/icon-48.png" alt="" className="size-6 rounded-md" />
         <span className="flex-1 truncate font-semibold text-foreground">{t('appShortName')}</span>
