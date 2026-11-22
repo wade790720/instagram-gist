@@ -25,6 +25,14 @@ test('onboarding stays done after "Re-sort everything" leaves nothing sorted', a
   assert.equal(db.onboarded, true); // stored, so a reload keeps it
 });
 
+test('pool runs every job once, skips failures, returns the count', async () => {
+  const { pool } = await import('./thumbs');
+  const seen: number[] = [];
+  const n = await pool([1, 2, 3, 4, 5, 6, 7, 8], async x => { if (x === 3) throw new Error('expired'); seen.push(x); }, 'syncingThumbs');
+  assert.equal(n, 8);
+  assert.deepEqual(seen.sort(), [1, 2, 4, 5, 6, 7, 8]);
+});
+
 test('"Delete all data" keeps the error-report choice and the settings', async () => {
   const { clearAll } = await import('./actions');
   const { ui } = await import('./store');

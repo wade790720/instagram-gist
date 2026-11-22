@@ -4,7 +4,7 @@ import { record } from './error-log';
 import { gemini } from './gemini';
 import { t, when } from './i18n';
 import { fromIg } from './ig';
-import { clearThumbs, fetchThumbs } from './thumbs';
+import { clearThumbs, fetchThumbs, pool } from './thumbs';
 import { allItems, ask, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui } from './store';
 
 const DAY = 864e5;
@@ -76,29 +76,16 @@ async function fetchAvatars() {
   const urls = new Map<string, string>();
   for (const p of db.saved) if (p.pic) urls.set(p.user, p.pic);
   for (const u of db.following) if (u.pic) urls.set(u.username, u.pic); // fresher than saved posts: wins
-  const todo = [...urls].filter(([name]) => !avatars[name]);
-  const total = todo.length;
-  let done = 0;
-  const worker = async () => {
-    for (let job; (job = todo.pop()); ) {
-      const [name, url] = job;
-      try {
-        const r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' });
-        if (r.ok) {
-          const blob = await r.blob();
-          avatars[name] = await new Promise<string>(res => {
-            const f = new FileReader();
-            f.onload = () => res(f.result as string);
-            f.readAsDataURL(blob);
-          });
-        }
-      } catch { /* expired or blocked: the placeholder stays */ }
-      ui.progress = ++done / total;
-      status(t('syncingAvatars', done, total));
-    }
-  };
-  // ponytail: 6 at a time; the CDN is not the rate-limited API, so no pauses.
-  await Promise.all(Array.from({ length: 6 }, worker));
+  const total = await pool([...urls].filter(([name]) => !avatars[name]), async ([name, url]) => {
+    const r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' });
+    if (!r.ok) return;
+    const blob = await r.blob();
+    avatars[name] = await new Promise<string>(res => {
+      const f = new FileReader();
+      f.onload = () => res(f.result as string);
+      f.readAsDataURL(blob);
+    });
+  }, 'syncingAvatars');
   if (total) await chrome.storage.local.set({ avatars });
 }
 

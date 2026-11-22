@@ -8,26 +8,32 @@ import { db, emit, status, ui } from './store';
 const CACHE = 'thumbs';
 const key = (id: string) => `https://ig-sorter.invalid/thumb/${id}`;
 
+/** IG CDN downloads (covers, avatars) with progress in the status bar. Empties todo; returns how many there were.
+ * A failed download (expired URL, blocked) is skipped: the card keeps its placeholder. */
+// ponytail: 6 at a time, no pauses; the CDN is not the rate-limited API.
+export async function pool<T>(todo: T[], job: (x: T) => Promise<void>, label: string) {
+  const total = todo.length;
+  let done = 0;
+  const lane = async () => {
+    for (let x; (x = todo.pop()) !== undefined; ) {
+      try { await job(x); } catch { /* skipped, see above */ }
+      ui.progress = ++done / total;
+      status(t(label, done, total));
+    }
+  };
+  await Promise.all(Array.from({ length: 6 }, lane));
+  return total;
+}
+
 // Same reason as avatars: IG's CDN blocks <img> on other sites and its URLs expire, so sync
 // downloads each cover once while its URL is fresh (host_permissions allow the fetch).
-// ponytail: 6 at a time, no pauses; the CDN is not the rate-limited API.
 export async function fetchThumbs() {
   const cache = await caches.open(CACHE);
   const have = new Set((await cache.keys()).map(r => r.url));
-  const todo = db.saved.filter(p => p.thumb && !have.has(key(p.id)));
-  const total = todo.length;
-  let done = 0;
-  const worker = async () => {
-    for (let p; (p = todo.pop()); ) {
-      try {
-        const r = await fetch(p.thumb!, { credentials: 'omit', referrerPolicy: 'no-referrer' });
-        if (r.ok) await cache.put(key(p.id), r);
-      } catch { /* expired or blocked: the card shows its caption instead */ }
-      ui.progress = ++done / total;
-      status(t('syncingThumbs', done, total));
-    }
-  };
-  await Promise.all(Array.from({ length: 6 }, worker));
+  const total = await pool(db.saved.filter(p => p.thumb && !have.has(key(p.id))), async p => {
+    const r = await fetch(p.thumb!, { credentials: 'omit', referrerPolicy: 'no-referrer' });
+    if (r.ok) await cache.put(key(p.id), r);
+  }, 'syncingThumbs');
   if (total) { ui.thumbs++; emit(); } // mounted cards look again
 }
 
