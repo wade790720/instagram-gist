@@ -5,7 +5,7 @@ import { gemini } from './gemini';
 import { t, when } from './i18n';
 import { fromIg } from './ig';
 import { clearThumbs, coverJobs, pool } from './thumbs';
-import { allItems, ask, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui } from './store';
+import { allItems, ask, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui, uiLang } from './store';
 
 const DAY = 864e5;
 
@@ -100,6 +100,7 @@ export async function categorize() {
       emit();
     }
   }
+  if (!db.onboarded && allItems().some(x => x.cat)) { db.onboarded = true; await save(); }
   if (first && db.clubHint === undefined && allItems().some(x => x.cat)) { db.clubHint = true; await save(); }
 
   // ponytail: asks again on every run while a small topic has no similar big one; cheap on the lite model.
@@ -246,7 +247,8 @@ export async function load() {
   Object.assign(avatars, stored);
   for (const k of DB_KEYS) if (k in rest) Object.assign(db, { [k]: rest[k] });
   if (db.settings?.model && !db.settings.summaryModel && db.settings.model === 'gemini-3.8-flash') db.settings.model = DEFAULTS.model;
-  db.settings = { ...DEFAULTS, ...db.settings };
+  db.settings = { ...DEFAULTS, ...db.settings, lang: db.settings?.lang || uiLang() };
+  db.onboarded ||= allItems().some(x => x.cat);
   db.summaries = Core.normalizeSummaries(db.summaries);
   db.following = Core.uniqById(db.following);
   db.saved = Core.uniqById(db.saved);

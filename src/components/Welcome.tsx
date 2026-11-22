@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 
 type State = 'done' | 'now' | 'later';
 
-export const onboarded = () => !!db.settings.apiKey && (db.onboarded ||= allItems().some(x => x.cat));
+export const onboarded = () => !!db.settings.apiKey && (!!db.onboarded || allItems().some(x => x.cat));
 
 function Step({ n, title, state, children }: { n: number; title: string; state: State; children?: ReactNode }) {
   return (

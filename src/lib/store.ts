@@ -21,17 +21,17 @@ export interface Ask { msg: string; ok: string; input?: boolean; danger?: boolea
 
 // Free tier, 2026-09: 3.5-flash-lite ~500 calls/day (sorting needs many), 3.8-flash ~20/day
 // (better writing; enough for digests).
-export const DEFAULTS: Settings = {
+export const DEFAULTS: Omit<Settings, 'lang'> = {
   apiKey: '',
   model: 'gemini-3.5-flash-lite',
   summaryModel: 'gemini-3.8-flash',
   followView: 'grid',
-  lang: chrome.i18n.getUILanguage().startsWith('zh') ? 'zh' : 'en',
 };
+export const uiLang = (): Lang => (chrome.i18n.getUILanguage().startsWith('zh') ? 'zh' : 'en');
 
 // ponytail: one mutable store plus a version counter, same model as the old app.js (mutate, then
 // emit). Components re-render on every emit; the lists are small enough that this never shows.
-export const db: DB = { following: [], saved: [], summaries: {}, settings: { ...DEFAULTS }, lastSync: {}, defs: {} };
+export const db: DB = { following: [], saved: [], summaries: {}, settings: { ...DEFAULTS, lang: 'en' }, lastSync: {}, defs: {} };
 export const avatars: Record<string, string> = {};
 export const ui = {
   view: { tab: 'saved' as Tab, cat: '', q: '' },
