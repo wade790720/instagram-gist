@@ -182,7 +182,7 @@ function AskDialog() {
         )}
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => close(null)}>{t('cancel')}</AlertDialogCancel>
-          <AlertDialogAction onClick={ok} className={cn(a?.danger && 'bg-destructive text-white hover:bg-destructive/90')}>{a?.ok}</AlertDialogAction>
+          <AlertDialogAction onClick={ok} className={cn(a?.danger && 'bg-destructive text-white hover:bg-destructive/90 dark:bg-destructive/60')}>{a?.ok}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
