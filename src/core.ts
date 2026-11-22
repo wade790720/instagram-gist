@@ -36,10 +36,11 @@ interface IgMedia extends IgImage {
   carousel_media?: (IgImage & { accessibility_caption?: string })[];
 }
 
+const MIN_THUMB_WIDTH = 400;
 export function thumbOf(m: IgMedia): Pick<Post, 'thumb' | 'w' | 'h'> {
   const src = m.image_versions2?.candidates?.length ? m : m.carousel_media?.[0];
   const sizes = [...(src?.image_versions2?.candidates || [])].sort((a, b) => a.width - b.width);
-  const c = sizes.find(x => x.width >= 400) ?? sizes.at(-1);
+  const c = sizes.find(x => x.width >= MIN_THUMB_WIDTH) ?? sizes.at(-1);
   if (!c) return { thumb: '' };
   return { thumb: c.url, w: src?.original_width || c.width, h: src?.original_height || c.height };
 }
@@ -48,11 +49,11 @@ interface IgUser { id?: string; pk?: number | string; username: string; full_nam
 const TYPES: Record<number, PostType> = { 1: 'image', 2: 'video', 8: 'carousel' };
 const LANGS = {
   zh: {
-    name: 'Traditional Chinese (Taiwan)', other: '其他', friends: '好友', length: 'exactly 2 Chinese characters',
+    name: 'Traditional Chinese (Taiwan)', other: '其他', friends: '好友', nameRule: 'exactly 2 Chinese characters',
     topics: ['行銷', '商業', '科技', '設計', '藝術', '攝影', '時尚', '美食', '旅遊', '生活', '娛樂', '音樂', '心靈', '運動'],
   },
   en: {
-    name: 'English', other: 'Other', friends: 'Friends', length: 'one or two words',
+    name: 'English', other: 'Other', friends: 'Friends', nameRule: 'one or two words',
     topics: ['Marketing', 'Business', 'Tech', 'Design', 'Art', 'Photography', 'Fashion', 'Food', 'Travel', 'Lifestyle', 'Entertainment', 'Music', 'Wellbeing', 'Sports'],
   },
 };
@@ -134,7 +135,7 @@ export function categorizePrompt(items: Item[], cats: string[], l: string, defs:
     ...(list.some(c => defs[c])
       ? ["- Pick each item's category from this list. A name may be followed by what belongs in it:", ...list.map(c => (defs[c] ? `  ${c}: ${defs[c]}` : `  ${c}`))]
       : [`- Pick each item's category from this list: ${list.join(', ')}`]),
-    `- Only when an item fits none of them, create a new category in ${L.name}, ${L.length}, in the same style as the list.`,
+    `- Only when an item fits none of them, create a new category in ${L.name}, ${L.nameRule}, in the same style as the list.`,
     `- Use "${L.other}" when you cannot tell.`,
     'Return only a JSON object that maps every item number to one category, e.g. {"1": "...", "2": "..."}.',
     '',

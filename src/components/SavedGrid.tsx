@@ -5,7 +5,7 @@ import { t } from '@/lib/i18n';
 import { useThumb } from '@/lib/thumbs';
 import { Avatar, TopicPicker, useProgressive } from './ItemParts';
 
-const COL = 220;
+const MIN_COL_WIDTH = 220;
 const GAP = 12;
 const ratio = (p: Post) => Math.min(1.5, Math.max(0.75, p.w && p.h ? p.h / p.w : 1.25));
 
@@ -13,7 +13,7 @@ export function SavedGrid({ posts, cats }: { posts: Post[]; cats: string[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(4);
   useLayoutEffect(() => {
-    const ro = new ResizeObserver(([e]) => setCols(Math.max(2, Math.floor((e.contentRect.width + GAP) / (COL + GAP)))));
+    const ro = new ResizeObserver(([e]) => setCols(Math.max(2, Math.floor((e.contentRect.width + GAP) / (MIN_COL_WIDTH + GAP)))));
     ro.observe(ref.current!);
     return () => ro.disconnect();
   }, []);

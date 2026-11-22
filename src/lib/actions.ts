@@ -8,6 +8,8 @@ import { clearThumbs, coverJobs, pool } from './thumbs';
 import { allItems, ask, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui, uiLang } from './store';
 
 const DAY = 864e5;
+const FOLLOWS_PER_CALL = 400;
+const POSTS_PER_CALL = 150;
 
 export async function run(fn: () => Promise<void>) {
   if (ui.busy) return;
@@ -59,7 +61,7 @@ export const sync = () => run(async () => {
   const covers = await coverJobs();
   await pool([...avatarJobs, ...covers], job => job(), 'syncingImages');
   if (avatarJobs.length) await chrome.storage.local.set({ avatars });
-  if (covers.length) { ui.thumbs++; emit(); }
+  if (covers.length) { ui.thumbsVersion++; emit(); }
   if (!db.settings.apiKey) return status(t('needKey'));
   await categorize();
   status(t('synced', new Date().toLocaleTimeString()));
@@ -87,7 +89,7 @@ function avatarDownloads() {
 export async function categorize() {
   const first = !allItems().some(x => x.cat);
   const cats = () => Core.groupCounts(allItems()).map(([c]) => c);
-  for (const [list, size] of [[db.following, 400], [db.saved, 150]] as [Item[], number][]) {
+  for (const [list, size] of [[db.following, FOLLOWS_PER_CALL], [db.saved, POSTS_PER_CALL]] as [Item[], number][]) {
     const todo = list.filter(x => !x.cat);
     for (let i = 0; i < todo.length; i += size) {
       ui.progress = i / todo.length;

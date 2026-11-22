@@ -36,7 +36,7 @@ export const clearThumbs = () => caches.delete(CACHE);
 
 export function useThumb(p: Post) {
   const [src, setSrc] = useState<string>();
-  const version = ui.thumbs;
+  const version = ui.thumbsVersion;
   useEffect(() => {
     if (p.thumb?.startsWith('data:')) return setSrc(p.thumb);
     let url: string | undefined;

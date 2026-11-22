@@ -71,7 +71,7 @@ export function Sidebar() {
 function TopicRow({ cat, n, on }: { cat: string; n: number; on: boolean }) {
   const [menu, setMenu] = useState(false);
   const [editing, setEditing] = useState(false);
-  const edit = useRef(false);
+  const skipFocusReturn = useRef(false);
   const shown = on || menu;
 
   return (
@@ -96,8 +96,8 @@ function TopicRow({ cat, n, on }: { cat: string; n: number; on: boolean }) {
               <MoreHorizontal className="size-4" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-40" onCloseAutoFocus={e => { if (edit.current) { e.preventDefault(); edit.current = false; } }}>
-            <DropdownMenuItem onSelect={() => { edit.current = true; setEditing(true); }}><Pencil />{t('editTopic')}</DropdownMenuItem>
+          <DropdownMenuContent align="start" className="w-40" onCloseAutoFocus={e => { if (skipFocusReturn.current) { e.preventDefault(); skipFocusReturn.current = false; } }}>
+            <DropdownMenuItem onSelect={() => { skipFocusReturn.current = true; setEditing(true); }}><Pencil />{t('editTopic')}</DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onSelect={() => deleteTopic(cat)}><Trash2 />{t('deleteCat')}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

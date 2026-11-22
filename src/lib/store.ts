@@ -42,7 +42,7 @@ export const ui = {
   opened: new Set<string>(),
   ask: null as Ask | null,
   tidy: null as null | { merges: [string, string][]; defs: Record<string, string> },
-  thumbs: 0,
+  thumbsVersion: 0,
 };
 
 let version = 0;
