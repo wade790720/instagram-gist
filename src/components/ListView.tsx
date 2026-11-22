@@ -46,7 +46,7 @@ function UserRows({ users, cats }: { users: User[]; cats: string[] }) {
             <Avatar name={u.username} />
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <a href={`https://www.instagram.com/${u.username}/`} target="_blank" rel="noreferrer" className="truncate font-medium text-foreground hover:underline">@{u.username}</a>
-              {u.verified && <BadgeCheck aria-label={t('verified')} className="size-4 shrink-0 fill-sky-500 text-white" />}
+              {u.verified && <BadgeCheck aria-label={t('verified')} className="size-4 shrink-0 fill-sky-600 text-white" />}
               {u.name && <span className="truncate text-muted-foreground">{u.name}</span>}
             </div>
             <TopicPicker x={u} cats={cats} />
@@ -71,7 +71,7 @@ function UserGrid({ users, cats }: { users: User[]; cats: string[] }) {
             <Avatar name={u.username} className="mb-2 size-16 text-xl" />
             <span className="flex w-full min-w-0 items-center justify-center gap-1 font-medium text-foreground">
               <span className="truncate">@{u.username}</span>
-              {u.verified && <BadgeCheck aria-label={t('verified')} className="size-4 shrink-0 fill-sky-500 text-white" />}
+              {u.verified && <BadgeCheck aria-label={t('verified')} className="size-4 shrink-0 fill-sky-600 text-white" />}
             </span>
             <span className="w-full truncate text-xs text-muted-foreground">{u.name || ' '}</span>
             {/* The whole card opens the profile; the topic picker sits above the link. */}
