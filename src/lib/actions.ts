@@ -1,5 +1,6 @@
 import * as Core from '@/core';
 import type { Digest, Item, Post, User } from '@/core';
+import { record } from './error-log';
 import { gemini } from './gemini';
 import { t, when } from './i18n';
 import { fromIg } from './ig';
@@ -13,7 +14,11 @@ export async function run(fn: () => Promise<void>) {
   if (ui.busy) return;
   Object.assign(ui, { busy: true, progress: 'busy' });
   emit();
-  try { await fn(); } catch (e) { status(t('error', (e as Error).message), true); }
+  try { await fn(); } catch (e) {
+    status(t('error', (e as Error).message), true);
+    // Caught here, so the global handlers never see it: send it to the error inbox too (IG or Gemini changes show up here first).
+    void record(e, 'action').catch(() => {});
+  }
   finally { Object.assign(ui, { busy: false, progress: null }); emit(); }
 }
 
