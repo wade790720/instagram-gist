@@ -51,7 +51,7 @@ function Card({ p, cats }: { p: Post; cats: string[] }) {
   return (
     <div className="group relative overflow-hidden rounded-lg bg-muted" style={{ aspectRatio: `1 / ${ratio(p)}` }}>
       {src
-        ? <img src={src} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]" />
+        ? <img src={src} alt="" className="absolute inset-0 size-full object-cover" />
         : <p className="absolute inset-0 line-clamp-[9] p-3 text-xs leading-5 text-muted-foreground">{p.caption || p.alt}</p>}
       <a href={`https://www.instagram.com/p/${p.code}/`} target="_blank" rel="noreferrer" title={p.caption.slice(0, 200)}
         aria-label={t('openPost', p.user)} className="absolute inset-0 z-10 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" />

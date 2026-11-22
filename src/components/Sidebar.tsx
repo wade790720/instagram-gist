@@ -94,8 +94,8 @@ function TopicRow({ cat, n, on }: { cat: string; n: number; on: boolean }) {
             <button aria-label={t('editCat', cat)} disabled={ui.busy}
               className={cn(
                 'absolute top-1/2 right-1 grid size-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground outline-none',
-                'transition-[opacity,scale,background-color] duration-150 ease-out hover:bg-foreground/10 hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring disabled:hidden',
-                shown ? 'scale-100 opacity-100' : 'scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100',
+                'transition-[opacity,background-color] duration-150 ease-out hover:bg-foreground/10 hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring disabled:hidden',
+                shown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
               )}>
               <MoreHorizontal className="size-4" />
             </button>
