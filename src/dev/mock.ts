@@ -1,5 +1,3 @@
-// Dev only (`npm run dev`): a fake `chrome` with sample data, so the UI runs as a plain web page.
-// main.tsx loads this only when import.meta.env.DEV and chrome.storage is missing.
 import zh from '../../public/_locales/zh_TW/messages.json';
 
 const msgs = zh as Record<string, { message: string }>;
@@ -13,7 +11,6 @@ const saved = Array.from({ length: 24 }, (_, i) => ({
   id: 's' + i, code: 'C' + i, user: names[i % names.length], type: (['image', 'video', 'carousel'] as const)[i % 3], takenAt: 0, pic: '',
   caption: ['留言「LEARN」，我把整份資源發給你。看完先存起來，下次卡關時會用到。', '這七個指令讓 Claude 進入創辦人模式：從市場、槓桿、流量、系統等方向思考。', '銷售 = 痛點情境 + 解決方案。三個真實案例拆解。'][i % 3],
   alt: '', cat: cats[(i % 4) + 1],
-  // Sample covers in IG's usual shapes (4:5, 1:1, 9:16, 3:4); i % 7 === 6 has none, to show the caption fallback.
   ...(i % 7 === 6 ? { thumb: '' } : sampleCover(i, [1350, 1080, 1920, 1440][i % 4])),
 }));
 function sampleCover(i: number, h: number) {
@@ -24,7 +21,6 @@ function sampleCover(i: number, h: number) {
 const summaries = {
   行銷商業: [{ id: 'd1', text: '• 銷售公式：痛點情境 + 解決方案，先描述讀者的處境再給方法 [1][3]\n• 開場 3 秒用反差鉤子留住陌生人 [2]\n• 留言關鍵字換資源，提高互動與觸及 [4]', sourceIds: ['s1', 's5', 's9', 's13'], notes: ['收斂成固定公式'], at: Date.now() }],
 };
-// Placeholder avatars: a coloured circle per name, so the list looks like real data.
 const avatars = Object.fromEntries([...names].map((n, i) => [n, `data:image/svg+xml,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="oklch(0.72 0.12 ${(i * 47) % 360})"/><text x="20" y="26" font-size="16" text-anchor="middle" fill="white" font-family="sans-serif">${n[0].toUpperCase()}</text></svg>`)}`]));
 let store: Record<string, unknown> = {

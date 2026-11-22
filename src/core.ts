@@ -1,22 +1,16 @@
-// Pure logic, no chrome.* APIs, so `npm test` can check it.
-
 export type Lang = 'zh' | 'en';
 export type PostType = 'image' | 'video' | 'carousel' | 'post';
 
 interface Tagged {
   id: string;
   cat?: string;
-  /** Picked by hand: survives "Re-sort everything" and the friend rule. */
   manual?: boolean;
-  /** IG CDN avatar URL. Signed and expires; following refreshes it daily, saved posts never do. */
   pic?: string;
 }
 export interface User extends Tagged { username: string; name: string; private: boolean; verified: boolean }
 export interface Post extends Tagged {
   code: string; user: string; caption: string; alt: string; type: PostType; takenAt: number;
-  /** Cover image URL on IG's CDN ('' = none). Signed and expires, so sync downloads it right away. */
   thumb?: string;
-  /** Original size, for the grid's aspect ratio. */
   w?: number;
   h?: number;
 }
@@ -24,19 +18,15 @@ export type Item = User | Post;
 
 export interface Digest {
   id: string;
-  /** Set for digests made with "Save as new": the instruction that made it. */
   title?: string;
   text: string;
   sourceIds: string[];
-  /** The user's rewrite instructions, re-applied on every update. */
   notes?: string[];
   at?: number;
-  /** One level of undo. */
   prev?: Omit<Digest, 'prev'>;
 }
 export type Summaries = Record<string, Digest[]>;
 
-// Only the fields we read from IG's private API.
 interface IgImage { image_versions2?: { candidates?: { url: string; width: number; height: number }[] }; original_width?: number; original_height?: number }
 interface IgMedia extends IgImage {
   id?: string; pk?: number | string; code: string; media_type?: number; taken_at?: number;
@@ -46,8 +36,6 @@ interface IgMedia extends IgImage {
   carousel_media?: (IgImage & { accessibility_caption?: string })[];
 }
 
-// Cover image: the post's own image (a video's is its cover frame), or a carousel's first slide.
-// Smallest candidate at least 400 px wide: sharp in a ~240 px grid column on a 2x screen, ~40 KB.
 export function thumbOf(m: IgMedia): Pick<Post, 'thumb' | 'w' | 'h'> {
   const src = m.image_versions2?.candidates?.length ? m : m.carousel_media?.[0];
   const sizes = [...(src?.image_versions2?.candidates || [])].sort((a, b) => a.width - b.width);
@@ -58,8 +46,6 @@ export function thumbOf(m: IgMedia): Pick<Post, 'thumb' | 'w' | 'h'> {
 interface IgUser { id?: string; pk?: number | string; username: string; full_name?: string; is_private?: boolean; is_verified?: boolean; profile_pic_url?: string }
 
 const TYPES: Record<number, PostType> = { 1: 'image', 2: 'video', 8: 'carousel' };
-// topics: the fixed starting list for a first sort. length: the naming rule for any new category,
-// enforced by applyCategories so the sidebar never mixes 2- and 4-character names.
 const LANGS = {
   zh: {
     name: 'Traditional Chinese (Taiwan)', other: '其他', friends: '好友', length: 'exactly 2 Chinese characters',
@@ -78,7 +64,6 @@ const idOf = (x: { id?: string; pk?: number | string }) => String(x.id ?? x.pk).
 
 export const isUser = (x: Item): x is User => (x as User).username !== undefined;
 
-// IG's alt text ("May be an image of text that says ...") is free OCR for carousels.
 export function slimPost(m: IgMedia): Post {
   const alts = [m.accessibility_caption, ...(m.carousel_media || []).map(c => c.accessibility_caption)].filter(Boolean);
   return {
@@ -97,15 +82,12 @@ export function slimPost(m: IgMedia): Post {
 export const slimUser = (u: IgUser): User =>
   ({ id: idOf(u), username: u.username, name: u.full_name || '', private: !!u.is_private, verified: !!u.is_verified, pic: u.profile_pic_url || '' });
 
-// Rule, not AI: the model only sees a handle and a name and cannot tell a friend from a shop.
-// Friend = not verified AND (follows you back OR private account). Hand-picked topics win.
 // ponytail: mutual small shops/creators land here too; the user moves them once (manual sticks).
 export function markFriends(users: User[], followerIds: Set<string>, l: string) {
   const label = lang(l).friends;
   let n = 0;
   for (const u of users) {
     if (u.manual) continue;
-    // keepCats carried yesterday's label over; drop it so ex-friends go back to the AI sort.
     if (u.cat === label) delete u.cat;
     if (u.verified || !(u.private || followerIds.has(u.id))) continue;
     u.cat = label;
@@ -120,8 +102,6 @@ export const uniqById = <T extends Tagged>(xs: T[]): T[] => {
   return xs.filter(x => !seen.has(x.id) && !!seen.add(x.id));
 };
 
-// Full refetch (following): drop accounts no longer present, keep old category tags
-// and the manual flag (user-chosen topics survive re-sorting).
 export function keepCats<T extends Tagged>(fresh: T[], old: T[]): T[] {
   const prev = new Map(old.map(x => [x.id, x]));
   return uniqById(fresh).map(x => {
@@ -130,7 +110,6 @@ export function keepCats<T extends Tagged>(fresh: T[], old: T[]): T[] {
   });
 }
 
-// Incremental fetch (saved): new items first, old ones after.
 // ponytail: never sees un-saves; add a full-refetch button if that matters.
 export function mergeById<T extends Tagged>(fresh: T[], old: T[]): T[] {
   const out = keepCats(fresh, old);
@@ -147,7 +126,6 @@ export function itemText(x: Item, max = 300) {
 // The model names categories freely only when nothing constrains it, and the first batch's style then
 // sticks: one run gave 2-character names, the next 4-character ones. So the list is fixed: the
 // user's own categories once there are any, the starting list before that.
-// defs: one-line topic definitions from "Tidy topics", so neighbouring topics keep the same edges each run.
 export function categorizePrompt(items: Item[], cats: string[], l: string, defs: Record<string, string> = {}) {
   const L = lang(l);
   const list = cats.length ? cats : [...L.topics, L.other];
@@ -170,8 +148,6 @@ export function categorizePrompt(items: Item[], cats: string[], l: string, defs:
 const SUMMARY_BUDGET = 60000;
 const perPost = (n: number) => Math.max(150, Math.min(1500, Math.floor(SUMMARY_BUDGET / 2 / Math.max(n, 1))));
 
-// notes: the user's saved rewrite instructions, re-applied on every regenerate.
-// current: the previous digest, so a rewrite improves it instead of starting over.
 export function summaryPrompt(cat: string, posts: Post[], l: string, notes: string[] = [], current = '') {
   const L = lang(l);
   const extra = [
@@ -195,14 +171,11 @@ export function summaryPrompt(cat: string, posts: Post[], l: string, notes: stri
 export function parseJson(text: string): Record<string, unknown> {
   const t = text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
   for (const s of [t, t.match(/\{[\s\S]*\}/)?.[0]]) {
-    try { if (s) return JSON.parse(s); } catch { /* try next */ }
+    try { if (s) return JSON.parse(s); } catch {}
   }
   return {};
 }
 
-// Items the model skipped stay untagged and get retried on the next run.
-// The prompt asks for the naming rule; this makes sure. A new name that breaks it (not exactly
-// 2 characters in Chinese, more than 2 words in English) becomes "other". Known names always pass.
 const fitsRule = (name: string, l: string) => (l === 'zh' ? [...name].length === 2 : name.split(/\s+/).length <= 2);
 export function applyCategories(batch: Tagged[], map: Record<string, unknown>, known: string[] = [], l?: string) {
   let n = 0;
@@ -216,7 +189,6 @@ export function applyCategories(batch: Tagged[], map: Record<string, unknown>, k
   return n;
 }
 
-// Rename a topic on every item and its digests. Renaming onto an existing topic merges the two.
 // ponytail: the friend label is fixed, so a renamed 好友 comes back for non-manual follows on the next daily refetch.
 export function renameCat(items: Tagged[], summaries: Summaries, from: string, to: string) {
   let n = 0;
@@ -228,9 +200,6 @@ export function renameCat(items: Tagged[], summaries: Summaries, from: string, t
   return n;
 }
 
-// A topic with SMALL items or fewer clutters the sidebar (喜劇, 玩具…): after each sort, the model
-// moves it into a similar big topic (娛樂). "Other" and the friend label never take part.
-// Only topics with an AI-placed item count as small: hand-picked items stay where the user put them.
 const SMALL = 5;
 export function smallTopics(items: Tagged[], l: string) {
   const L = lang(l);
@@ -253,8 +222,6 @@ export function mergePrompt(small: string[], big: string[], l: string) {
   ].join('\n');
 }
 
-// Moves the AI-placed items of each small topic into its big topic; unknown answers are ignored.
-// A topic left with no items hands its digests to the big topic, as renameCat does.
 export function mergeSmall(items: Tagged[], summaries: Summaries, map: Record<string, unknown>, big: string[]) {
   let n = 0;
   for (const [from, to] of Object.entries(map)) {
@@ -268,9 +235,6 @@ export function mergeSmall(items: Tagged[], summaries: Summaries, map: Record<st
   return n;
 }
 
-// "Tidy topics": one call reads every topic with a few example items, proposes merges of topics that
-// mean the same area, and writes a one-line definition for each. Other and the friend label stay out.
-// items: saved posts first, so the examples carry captions rather than bare account names.
 const tidyNames = (items: Tagged[], l: string) => groupCounts(items).filter(([c]) => c !== lang(l).other && c !== lang(l).friends);
 export function tidyPrompt(items: Item[], l: string) {
   const L = lang(l);
@@ -285,7 +249,6 @@ export function tidyPrompt(items: Item[], l: string) {
   ].join('\n');
 }
 
-// Keeps only usable answers: merges between two listed topics (no chains), definitions of listed topics.
 export function parseTidy(answer: Record<string, unknown>, items: Tagged[], l: string) {
   const names = tidyNames(items, l).map(([c]) => c);
   const obj = (v: unknown) => (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
@@ -298,8 +261,6 @@ export function parseTidy(answer: Record<string, unknown>, items: Tagged[], l: s
   return { merges: merges.filter(([, to]) => !froms.has(to)), defs };
 }
 
-// Delete a topic: its items go back to unsorted (and lose the manual flag), so the next sort
-// run places them again; its digests are deleted.
 export function deleteCat(items: Tagged[], summaries: Summaries, cat: string) {
   let n = 0;
   for (const x of items) if (x.cat === cat) { delete x.cat; delete x.manual; n++; }
@@ -313,14 +274,11 @@ export function groupCounts(items: Tagged[]): [string, number][] {
   return Object.entries(m).sort((a, b) => b[1] - a[1]);
 }
 
-// Before v0.2 a topic held one digest object; now it holds a list of digests (different angles
-// on the same posts, each with its own instructions). Converts in place, safe to run every load.
 export function normalizeSummaries(all: Record<string, Digest[] | Omit<Digest, 'id'>> = {}): Summaries {
   for (const [cat, v] of Object.entries(all)) if (!Array.isArray(v)) all[cat] = [{ id: 'd0', ...v }];
   return all as Summaries;
 }
 
-// Old sources keep their [n] numbers; new posts are appended after them.
 export function orderSources(prevIds: string[], posts: Post[]): Post[] {
   const byId = new Map(posts.map(p => [p.id, p]));
   const had = new Set(prevIds);

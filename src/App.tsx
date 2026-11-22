@@ -18,13 +18,11 @@ import { onboarded, Welcome } from './components/Welcome';
 
 const TAB_LABEL = { following: 'tabFollowing', saved: 'tabSaved', digests: 'tabBookmarks', settings: 'tabSettings' } as const;
 
-// Linear's inverted L: sidebar + header frame the content; only the content scrolls.
 export function App() {
   useStore();
   const { tab } = ui.view;
   const scroller = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(false);
-  // New tab or topic: start at the top.
   useEffect(() => { scroller.current?.scrollTo({ top: 0 }); }, [tab, ui.view.cat]);
 
   return (
@@ -71,7 +69,6 @@ function Header() {
         </>}
         {count !== null && <span className="ml-1 text-xs font-normal text-muted-foreground tabular-nums">{count}</span>}
       </nav>
-      {/* During onboarding, step 3 has its own sort button for all items. */}
       {untagged > 0 && onboarded() && (
         <Button size="sm" variant="outline" className="h-7" disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
       )}
@@ -86,7 +83,6 @@ function Header() {
   );
 }
 
-// Following only: cards (faces) or rows (names). Kept in settings, so the choice sticks.
 function ViewToggle() {
   const v = db.settings.followView;
   const set = (followView: 'grid' | 'list') => { db.settings.followView = followView; save(); emit(); };
@@ -101,12 +97,10 @@ function ViewToggle() {
   );
 }
 
-// Status and progress live in one slim bar at the bottom, like an editor's status bar.
 function StatusBar() {
   const p = ui.progress;
   return (
     <footer role="status" className="flex min-h-8 shrink-0 items-center gap-3 border-t px-6 py-1.5 text-xs">
-      {/* An error wraps in full: its last sentence is the way out. Progress text stays on one line. */}
       <span className={cn('min-w-0 flex-1', ui.err ? 'text-destructive' : 'truncate text-muted-foreground')} title={ui.status}>{ui.status}</span>
       {p !== null && (
         <span className="relative h-1 w-32 shrink-0 overflow-hidden rounded-full bg-muted" aria-hidden>
@@ -119,8 +113,6 @@ function StatusBar() {
   );
 }
 
-// "Tidy topics" review: every merge is ticked by default, untick to keep two topics apart.
-// Definitions are read-only in this first version; topics merged away drop theirs.
 function TidyDialog() {
   const plan = ui.tidy;
   const [skip, setSkip] = useState<Set<string>>(new Set());
@@ -161,7 +153,6 @@ function TidyDialog() {
   );
 }
 
-// One dialog for every confirm/prompt; actions call ask() and await the answer.
 function AskDialog() {
   const a = ui.ask;
   const [text, setText] = useState('');

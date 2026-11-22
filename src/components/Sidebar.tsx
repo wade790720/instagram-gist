@@ -24,7 +24,6 @@ export function Sidebar() {
   ];
   const list = tab === 'following' || tab === 'saved' ? db[tab] : null;
 
-  // Below 768px (or a desktop window zoomed past it) the sidebar stacks on top, so content keeps the full width.
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground max-md:max-h-[40dvh] max-md:w-full max-md:border-r-0 max-md:border-b">
       <div className="flex h-12 items-center gap-2 px-3">
@@ -69,12 +68,10 @@ export function Sidebar() {
   );
 }
 
-// Edit sits on the topic itself, as in Linear, Gmail and Notion: "⋯" fades in on hover and stays
-// on the selected topic; right-click opens the same menu. Edit turns the row into a text field.
 function TopicRow({ cat, n, on }: { cat: string; n: number; on: boolean }) {
   const [menu, setMenu] = useState(false);
   const [editing, setEditing] = useState(false);
-  const edit = useRef(false); // Edit picked: keep Radix from moving focus back to "⋯" on close
+  const edit = useRef(false);
   const shown = on || menu;
 
   return (
@@ -83,7 +80,6 @@ function TopicRow({ cat, n, on }: { cat: string; n: number; on: boolean }) {
         <button onClick={() => setView({ cat })} className={cn(row, 'pr-8', on ? 'bg-accent text-foreground' : 'hover:bg-accent/60 hover:text-foreground')}>
           <TopicDot cat={cat} />
           <span className={cn('flex-1 truncate', on && 'font-medium')}>{cat}</span>
-          {/* The count steps aside for "⋯" in the same spot, so nothing shifts. */}
           <span className={cn('absolute right-2 text-xs tabular-nums text-muted-foreground transition-opacity duration-150', shown ? 'opacity-0' : 'group-hover:opacity-0')}>{n}</span>
         </button>
       )}
@@ -110,15 +106,13 @@ function TopicRow({ cat, n, on }: { cat: string; n: number; on: boolean }) {
   );
 }
 
-// Enter saves; Esc or clicking away cancels, so a half-typed name never merges two topics.
-// The status bar says when the name already exists (= merge), before it happens.
 function TopicInput({ cat, done }: { cat: string; done: () => void }) {
   const before = useRef(ui.status);
   const finished = useRef(false);
   const others = Core.groupCounts(allItems()).map(([c]) => c).filter(c => c !== cat);
   const hint = (v: string) => status(others.includes(v.trim()) ? t('mergeHint', v.trim()) : t('enterToSave'));
   const finish = (to?: string) => {
-    if (finished.current) return; // unmounting fires blur once more
+    if (finished.current) return;
     finished.current = true;
     status(before.current);
     done();

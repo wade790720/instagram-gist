@@ -63,8 +63,7 @@ export async function fromIg<T>(kind: Kind, known: string[], maxPages: number, r
     if (retry && /frame/i.test((e as Error).message)) return fromIg(kind, known, maxPages, false);
     throw e;
   } finally {
-    // Close the tab only if we opened it; never touch the user's own IG tab.
-    if (tab.created) chrome.tabs.remove(tab.id).catch(() => {}); // user may have closed it
+    if (tab.created) chrome.tabs.remove(tab.id).catch(() => {});
   }
   // Chrome has no InjectionResult.error: if igFetch throws, result is just null.
   if (!result) throw new Error(t('igFailed'));

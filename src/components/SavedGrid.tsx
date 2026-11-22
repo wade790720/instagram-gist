@@ -5,13 +5,10 @@ import { t } from '@/lib/i18n';
 import { useThumb } from '@/lib/thumbs';
 import { Avatar, TopicPicker, useProgressive } from './ItemParts';
 
-const COL = 220; // min column width, px
+const COL = 220;
 const GAP = 12;
-// Height / width, kept between 4:5-ish landscape and 2:3 portrait so no card is a sliver or a tower.
 const ratio = (p: Post) => Math.min(1.5, Math.max(0.75, p.w && p.h ? p.h / p.w : 1.25));
 
-// Masonry like Pinterest: each card goes to the shortest column, in saved order, so the newest
-// posts stay near the top. Assignment depends only on the order, so loading more never reshuffles.
 export function SavedGrid({ posts, cats }: { posts: Post[]; cats: string[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(4);
@@ -43,8 +40,6 @@ export function SavedGrid({ posts, cats }: { posts: Post[]; cats: string[] }) {
   );
 }
 
-// The whole card opens the post on IG in a new tab (a stretched link under the overlay);
-// only the topic chip on the dark strip stays clickable on its own.
 function Card({ p, cats }: { p: Post; cats: string[] }) {
   const src = useThumb(p);
   const TypeIcon = p.type === 'video' ? Play : p.type === 'carousel' ? Copy : null;

@@ -14,7 +14,6 @@ import { CLASSROOM_URL } from './ClubLink';
 
 const postUrl = (code: string) => `https://www.instagram.com/p/${code}/`;
 
-// [n] in the digest links back to the n-th source post. Model output is rendered as text, never HTML.
 function DigestText({ d }: { d: Digest }) {
   return (
     <div className="whitespace-pre-wrap leading-[1.75]">
@@ -29,7 +28,6 @@ function DigestText({ d }: { d: Digest }) {
   );
 }
 
-/** One topic's digests, or a "Make digest" card when it has none yet. */
 export function TopicDigests({ cat }: { cat: string }) {
   const list = db.summaries[cat] || [];
   if (!list.length) return (
@@ -61,7 +59,6 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
         <div className="border-t px-4 pt-3 pb-4">
           <DigestText d={d} />
           {!!d.notes?.length && <p className="mt-3 text-xs text-muted-foreground">{t('notesApplied', d.notes.join('；'))}</p>}
-          {/* Enter = rewrite this digest. "Save as new" keeps this one and adds another built from it. */}
           <form className="mt-4 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); send(false); }}>
             <Input value={note} onChange={e => setNote(e.target.value)} placeholder={t('refinePlaceholder')} aria-label={t('refine')} className="h-8 min-w-60 flex-1" />
             <Button type="submit" size="sm" variant="secondary" disabled={ui.busy || !note.trim()}><Sparkles />{t('refine')}</Button>
@@ -81,7 +78,6 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
   );
 }
 
-/** The 摘要 page: every digest, grouped by topic. */
 export function DigestsView() {
   const topics = Object.keys(db.summaries);
   if (!topics.length) return <Empty text={t('noBookmarks')} />;

@@ -1,15 +1,13 @@
-// Run: npm test. error-log keeps its consent in the same chrome.storage as the app's data;
-// the app's save() must never write back a stale copy of it.
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import '@/dev/mock'; // fake chrome.storage with sample data
+import '@/dev/mock';
 
 test('save keeps the error-report choice made after load', async () => {
   const { load } = await import('./actions');
   const { save } = await import('./store');
   await chrome.storage.local.set({ errorReporting: 'on' });
   await load();
-  await chrome.storage.local.set({ errorReporting: 'off' }); // the user unticks it in settings
+  await chrome.storage.local.set({ errorReporting: 'off' });
   await save();
   assert.equal((await chrome.storage.local.get(null)).errorReporting, 'off');
 });
@@ -18,11 +16,11 @@ test('onboarding stays done after "Re-sort everything" leaves nothing sorted', a
   const { load } = await import('./actions');
   const { allItems, db } = await import('./store');
   const { onboarded } = await import('@/components/Welcome');
-  await load(); // mock data: a key and sorted items
+  await load();
   assert.ok(onboarded());
-  for (const x of allItems()) delete x.cat; // re-sort cleared them, then the quota ran out
+  for (const x of allItems()) delete x.cat;
   assert.ok(onboarded());
-  assert.equal(db.onboarded, true); // stored, so a reload keeps it
+  assert.equal(db.onboarded, true);
 });
 
 test('pool runs every job once, skips failures, returns the count', async () => {
@@ -36,11 +34,11 @@ test('pool runs every job once, skips failures, returns the count', async () => 
 test('"Delete all data" keeps the error-report choice and the settings', async () => {
   const { clearAll } = await import('./actions');
   const { ui } = await import('./store');
-  Object.assign(globalThis, { caches: { delete: async () => true } }); // covers live in the Cache API
+  Object.assign(globalThis, { caches: { delete: async () => true } });
   await chrome.storage.local.set({ errorReporting: 'off' });
   const done = clearAll();
   await new Promise(r => setTimeout(r, 0));
-  ui.ask!.resolve(true); // the confirm dialog
+  ui.ask!.resolve(true);
   await done;
   const stored = await chrome.storage.local.get(null);
   assert.equal(stored.errorReporting, 'off');

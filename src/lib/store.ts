@@ -3,7 +3,6 @@ import type { Lang, Post, Summaries, User } from '@/core';
 
 export interface Settings {
   apiKey: string; model: string; summaryModel: string; lang: Lang;
-  /** Following tab: cards (faces) or rows (names). */
   followView: 'grid' | 'list';
 }
 export interface DB {
@@ -12,13 +11,9 @@ export interface DB {
   summaries: Summaries;
   settings: Settings;
   lastSync: { saved?: number; following?: number };
-  /** Topic -> one-line definition from "Tidy topics", sent with every sort. */
   defs: Record<string, string>;
-  /** Club line after the first sort: true = show, false = closed, missing = not reached yet. */
   clubHint?: boolean;
-  /** The three-step onboarding was finished once (see Welcome's onboarded). */
   onboarded?: boolean;
-  /** A suspiciously short following count, refused once (see sync). */
   shortFollowing?: number;
 }
 export type Tab = 'following' | 'saved' | 'digests' | 'settings';
@@ -37,21 +32,16 @@ export const DEFAULTS: Settings = {
 // ponytail: one mutable store plus a version counter, same model as the old app.js (mutate, then
 // emit). Components re-render on every emit; the lists are small enough that this never shows.
 export const db: DB = { following: [], saved: [], summaries: {}, settings: { ...DEFAULTS }, lastSync: {}, defs: {} };
-/** username -> data URL. Own storage key, outside db, so save() does not rewrite ~5 MB each time. */
 export const avatars: Record<string, string> = {};
 export const ui = {
   view: { tab: 'saved' as Tab, cat: '', q: '' },
   busy: false,
   status: '',
   err: false,
-  /** null = hidden, 'busy' = moving bar with no value, else a fraction 0..1. */
   progress: null as null | 'busy' | number,
-  /** Digests the user has opened, by "<topic>#<id>". */
   opened: new Set<string>(),
   ask: null as Ask | null,
-  /** "Tidy topics" proposal waiting for the user: merges to tick, definitions to keep. */
   tidy: null as null | { merges: [string, string][]; defs: Record<string, string> },
-  /** Bumped after covers are downloaded, so mounted cards look in the cache again. */
   thumbs: 0,
 };
 
@@ -61,13 +51,11 @@ export const emit = () => { version++; subs.forEach(f => f()); };
 const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
 export const useStore = () => useSyncExternalStore(subscribe, () => version);
 
-/** The app's own storage keys. error-log shares chrome.storage (consent, log), so load and clear touch only these. */
 export const DB_KEYS = ['following', 'saved', 'summaries', 'settings', 'lastSync', 'defs', 'clubHint', 'onboarded', 'shortFollowing'] as const satisfies readonly (keyof DB)[];
 export const save = () => chrome.storage.local.set({ ...db });
 export const status = (msg: string, err = false) => { Object.assign(ui, { status: msg, err }); emit(); };
 export const setView = (v: Partial<typeof ui.view>) => { Object.assign(ui.view, v); emit(); };
 export const allItems = () => [...db.following, ...db.saved];
 
-/** Confirm (resolves true) or prompt (input: resolves the trimmed text). null when cancelled. */
 export const ask = (a: Omit<Ask, 'resolve'>) =>
   new Promise<string | true | null>(resolve => { ui.ask = { ...a, resolve }; emit(); });

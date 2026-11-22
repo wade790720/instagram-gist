@@ -3,20 +3,16 @@ import type { Post } from '@/core';
 import { t } from './i18n';
 import { db, status, ui } from './store';
 
-// Post covers live in the Cache API, not chrome.storage: ~500 images (~25 MB) would otherwise be
-// read into memory on every page load. Each card reads only its own image, when it mounts.
 const CACHE = 'thumbs';
 const key = (id: string) => `https://ig-sorter.invalid/thumb/${id}`;
 
-/** IG CDN downloads (covers, avatars) with progress in the status bar. Empties todo; returns how many there were.
- * A failed download (expired URL, blocked) is skipped: the card keeps its placeholder. */
 // ponytail: 12 at a time (avatars and covers together), no pauses; the CDN is not the rate-limited API.
 export async function pool<T>(todo: T[], job: (x: T) => Promise<void>, label: string) {
   const total = todo.length;
   let done = 0;
   const lane = async () => {
     for (let x; (x = todo.pop()) !== undefined; ) {
-      try { await job(x); } catch { /* skipped, see above */ }
+      try { await job(x); } catch {}
       ui.progress = ++done / total;
       status(t(label, done, total));
     }
@@ -27,7 +23,6 @@ export async function pool<T>(todo: T[], job: (x: T) => Promise<void>, label: st
 
 // Same reason as avatars: IG's CDN blocks <img> on other sites and its URLs expire, so sync
 // downloads each cover once while its URL is fresh (host_permissions allow the fetch).
-/** One download job per cover not cached yet; sync runs them in the same pool as avatars. */
 export async function coverJobs() {
   const cache = await caches.open(CACHE);
   const have = new Set((await cache.keys()).map(r => r.url));
@@ -39,12 +34,11 @@ export async function coverJobs() {
 
 export const clearThumbs = () => caches.delete(CACHE);
 
-/** Object URL of a post's cached cover, or undefined while loading / when there is none. */
 export function useThumb(p: Post) {
   const [src, setSrc] = useState<string>();
   const version = ui.thumbs;
   useEffect(() => {
-    if (p.thumb?.startsWith('data:')) return setSrc(p.thumb); // dev mock
+    if (p.thumb?.startsWith('data:')) return setSrc(p.thumb);
     let url: string | undefined;
     let live = true;
     caches.open(CACHE).then(c => c.match(key(p.id))).then(r => r?.blob()).then(b => {

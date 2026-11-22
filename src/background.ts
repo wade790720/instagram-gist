@@ -1,4 +1,3 @@
-// One app tab only: two tabs would sync at the same time and overwrite each other's storage.
 // runtime.getContexts (Chrome 116+) finds our own tabs without the "tabs" permission.
 async function open() {
   const url = chrome.runtime.getURL('app.html');
@@ -9,5 +8,4 @@ async function open() {
 }
 
 chrome.action.onClicked.addListener(open);
-// First install: open the app, where the onboarding starts. Updates stay quiet.
 chrome.runtime.onInstalled.addListener(({ reason }) => { if (reason === 'install') open(); });

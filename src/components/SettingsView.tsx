@@ -10,7 +10,6 @@ import { ReportProblem } from '@/components/ReportProblem';
 import { ClubLink } from '@/components/ClubLink';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Local form state, so a background sync re-render never wipes a half-typed API key.
 export function SettingsView() {
   const [s, setS] = useState(() => ({ ...db.settings }));
   const set = (k: keyof typeof s) => (e: React.ChangeEvent<HTMLInputElement>) => setS({ ...s, [k]: e.target.value });

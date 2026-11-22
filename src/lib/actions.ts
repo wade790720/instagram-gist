@@ -9,7 +9,6 @@ import { allItems, ask, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui }
 
 const DAY = 864e5;
 
-// One action at a time. While busy, action buttons are disabled so ignored clicks are visible.
 export async function run(fn: () => Promise<void>) {
   if (ui.busy) return;
   Object.assign(ui, { busy: true, progress: 'busy' });
@@ -18,30 +17,23 @@ export async function run(fn: () => Promise<void>) {
     await fn();
   } catch (e) {
     status(t('error', (e as Error).message), true);
-    // Caught here, so the global handlers never see it: send it to the error inbox too (IG or Gemini changes show up here first).
     void record(e, 'action').catch(() => {});
   }
   finally { Object.assign(ui, { busy: false, progress: null }); emit(); }
 }
 
-// Runs only when the user presses Sync: no background fetching, to keep IG traffic low.
 export const sync = () => run(async () => {
   status(t('syncingSaved'));
   // ponytail: 50 pages caps the first import (~1000 posts) for good: later syncs stop at the
   // first known post, so older posts are never reached. Store next_max_id to resume if needed.
-  // Posts synced before avatars (pic) or covers (thumb) existed lack those URLs: refetch the whole
-  // list once (passing no known ids) to fill them in. Topics and manual picks survive through mergeById.
   const backfill = db.saved.some(p => p.pic === undefined || p.thumb === undefined);
   const saved = await fromIg<Parameters<typeof Core.slimPost>[0]>('saved', backfill ? [] : db.saved.map(x => x.id), 50);
   db.saved = Core.mergeById(saved.map(Core.slimPost), db.saved);
-  // Posts past the 50-page cap stay without URLs; mark them so the refetch never repeats.
   for (const p of db.saved) { p.pic ??= ''; p.thumb ??= ''; }
   db.lastSync.saved = Date.now();
-  await save(); // keep saved progress even if the following fetch below fails
+  await save();
   emit();
 
-  // Following has no "newest first" order, so it is a full refetch: at most once a day,
-  // however often Sync is pressed.
   if (Date.now() - (db.lastSync.following || 0) > DAY) {
     status(t('syncingFollowing'));
     // ponytail: 40 pages x 50 = 2000 accounts max; raise if someone follows more.
@@ -56,7 +48,6 @@ export const sync = () => run(async () => {
     }
     delete db.shortFollowing;
     db.following = Core.keepCats(following.map(Core.slimUser), db.following);
-    // Followers are only needed to spot mutual follows (friends); the list itself is not stored.
     // ponytail: 40 pages x 50 = 2000 followers read; past that, mutual friends fall back to the private-account signal.
     status(t('syncingFollowers'));
     const followers = await fromIg<Parameters<typeof Core.slimUser>[0]>('followers', [], 40);
@@ -64,12 +55,11 @@ export const sync = () => run(async () => {
     db.lastSync.following = Date.now();
   }
   await save();
-  // Avatars and covers both come from IG's CDN and do not wait on each other: one pool, one progress count.
   const avatarJobs = avatarDownloads();
   const covers = await coverJobs();
   await pool([...avatarJobs, ...covers], job => job(), 'syncingImages');
   if (avatarJobs.length) await chrome.storage.local.set({ avatars });
-  if (covers.length) { ui.thumbs++; emit(); } // mounted cards look in the cache again
+  if (covers.length) { ui.thumbs++; emit(); }
   if (!db.settings.apiKey) return status(t('needKey'));
   await categorize();
   status(t('synced', new Date().toLocaleTimeString()));
@@ -81,7 +71,7 @@ export const sync = () => run(async () => {
 function avatarDownloads() {
   const urls = new Map<string, string>();
   for (const p of db.saved) if (p.pic) urls.set(p.user, p.pic);
-  for (const u of db.following) if (u.pic) urls.set(u.username, u.pic); // fresher than saved posts: wins
+  for (const u of db.following) if (u.pic) urls.set(u.username, u.pic);
   return [...urls].filter(([name]) => !avatars[name]).map(([name, url]) => async () => {
     const r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' });
     if (!r.ok) return;
@@ -95,11 +85,8 @@ function avatarDownloads() {
 }
 
 export async function categorize() {
-  const first = !allItems().some(x => x.cat); // for the one-time club line after the first sort
+  const first = !allItems().some(x => x.cat);
   const cats = () => Core.groupCounts(allItems()).map(([c]) => c);
-  // Following first: it is cheap (only @name + display name, so 400 per call) and a quota
-  // error during saved posts would otherwise leave it untouched. Saved posts carry captions: 150 per call.
-  // Big batches keep a full first sort (~600 follows + ~500 posts) to about 5 calls of the daily quota.
   for (const [list, size] of [[db.following, 400], [db.saved, 150]] as [Item[], number][]) {
     const todo = list.filter(x => !x.cat);
     for (let i = 0; i < todo.length; i += size) {
@@ -115,7 +102,6 @@ export async function categorize() {
   }
   if (first && db.clubHint === undefined && allItems().some(x => x.cat)) { db.clubHint = true; await save(); }
 
-  // One extra call: topics with 5 items or fewer join a similar big topic (喜劇 -> 娛樂).
   // ponytail: asks again on every run while a small topic has no similar big one; cheap on the lite model.
   const { small, big } = Core.smallTopics(allItems(), db.settings.lang);
   if (!small.length) return;
@@ -127,8 +113,6 @@ export async function categorize() {
   emit();
 }
 
-// "Tidy topics": the AI proposes merges and a definition per topic; nothing changes until the user
-// applies it in the dialog. The writing model: one call, and the definitions steer every later sort.
 export const tidyTopics = () => run(async () => {
   status(t('tidying'));
   const items = [...db.saved, ...db.following];
@@ -139,14 +123,12 @@ export const tidyTopics = () => run(async () => {
   status('');
 });
 
-/** The one-time club line after the first sort: closed for good. */
 export async function hideClubHint() {
   db.clubHint = false;
   await save();
   emit();
 }
 
-/** merges: the ones the user left ticked. Merging works like renaming onto an existing topic. */
 export async function applyTidy(merges: [string, string][], defs: Record<string, string>) {
   ui.tidy = null;
   for (const [from, to] of merges) {
@@ -159,13 +141,8 @@ export async function applyTidy(merges: [string, string][], defs: Record<string,
   status(t('tidyDone', merges.length, Object.keys(db.defs).length));
 }
 
-/** Resume sorting without touching IG (Sync would fetch again) after a quota error or a stop. */
 export const sortRest = () => run(async () => { await categorize(); status(t('sortDone')); });
 
-// A topic holds a list of digests: different angles on the same posts (key points, formulas…).
-// i: which digest; undefined makes the topic's first one.
-// note: an instruction, saved on the digest so later updates keep applying it.
-// asNew: build a new digest from digest i and leave digest i untouched.
 export const summarize = (cat: string, i?: number, note = '', asNew = false) => run(async () => {
   status(t('summarizing'));
   const list = (db.summaries[cat] ||= []);
@@ -178,7 +155,7 @@ export const summarize = (cat: string, i?: number, note = '', asNew = false) => 
   const next: Digest = { id: old && !asNew ? old.id : Date.now().toString(36), title: asNew ? note.trim() : old?.title, text, sourceIds: posts.map(p => p.id), notes, at: Date.now() };
   if (asNew) {
     list.push(next);
-    ui.opened.add(cat + '#' + next.id); // show the new digest open
+    ui.opened.add(cat + '#' + next.id);
   } else {
     // ponytail: one level of undo (prev); keep a list if people want to step back further.
     if (old) { const { prev: _, ...rest } = old; next.prev = rest; }
@@ -204,8 +181,6 @@ export async function deleteDigest(cat: string, i: number) {
   emit();
 }
 
-// Topics are shared by following and saved, so both lists change together.
-// Renaming onto an existing topic merges the two (the UI warns before Enter).
 export async function renameTopic(from: string, to: string) {
   if (!to || to === from || ui.busy) return;
   Core.renameCat(allItems(), db.summaries, from, to);
@@ -225,7 +200,6 @@ export async function deleteTopic(cat: string) {
   emit();
 }
 
-/** Move one item by hand. manual = true keeps the choice through "Re-sort everything". */
 export async function moveItem(x: Item, cat: string | null) {
   const c = cat ?? (await ask({ msg: t('newCatPrompt'), ok: t('create'), input: true }));
   if (typeof c !== 'string' || !c) return;
@@ -242,7 +216,6 @@ export async function saveSettings(s: typeof db.settings) {
   });
   await save();
   status(t('saved'));
-  // A running sync picks up the new key itself; otherwise sort what is already synced.
   if (db.settings.apiKey) run(async () => { await categorize(); status(t('saved')); });
 }
 
@@ -262,29 +235,23 @@ export async function clearAll() {
   if (ui.busy || !(await ask({ msg: t('confirmClear'), ok: t('clearData'), danger: true })) || ui.busy) return;
   Object.assign(db, { following: [] as User[], saved: [] as Post[], summaries: {}, lastSync: {}, defs: {} });
   for (const k of Object.keys(avatars)) delete avatars[k];
-  // Not clear(): that would also wipe error-log's consent, turning reporting back on. save() below keeps settings.
   await chrome.storage.local.remove([...DB_KEYS, 'avatars']);
   await clearThumbs();
   await save();
   emit();
 }
 
-/** Loads storage and moves old data forward. Called once before the first render. */
 export async function load() {
   const { avatars: stored, ...rest } = (await chrome.storage.local.get(null)) as Partial<typeof db> & { avatars?: Record<string, string> };
   Object.assign(avatars, stored);
-  // Copying other keys into db would make every save() write their load-time values back.
   for (const k of DB_KEYS) if (k in rest) Object.assign(db, { [k]: rest[k] });
-  // Settings saved before summaryModel existed used 3.8-flash for sorting too; move sorting to lite once.
   if (db.settings?.model && !db.settings.summaryModel && db.settings.model === 'gemini-3.8-flash') db.settings.model = DEFAULTS.model;
   db.settings = { ...DEFAULTS, ...db.settings };
   db.summaries = Core.normalizeSummaries(db.summaries);
-  // Lists stored before uniqById may hold the same account or post twice (IG paging overlap).
   db.following = Core.uniqById(db.following);
   db.saved = Core.uniqById(db.saved);
   // gemini-2.x returns 404 for keys created after 2026-09-18; move saved settings off it.
   if (/^gemini-2\./.test(db.settings.model)) db.settings.model = DEFAULTS.model;
-  // Follows stored before the friend rule (private/verified) or avatars (pic) lack fields: refetch on the next Sync.
   if (db.following.length && (db.following[0].private === undefined || db.following[0].pic === undefined)) db.lastSync.following = 0;
   ui.status = t('lastSync', when(db.lastSync.saved), when(db.lastSync.following));
 }

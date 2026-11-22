@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { TopicDot } from './TopicDot';
 
-// Stored data URL (see avatarDownloads in actions.ts); initial letter until it is downloaded.
 export function Avatar({ name, className }: { name: string; className?: string }) {
   const src = avatars[name];
   return src
@@ -16,8 +15,6 @@ export function Avatar({ name, className }: { name: string; className?: string }
     : <span aria-hidden className={cn('grid size-7 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium text-muted-foreground uppercase', className)}>{name.slice(0, 1)}</span>;
 }
 
-// Move one item to another topic, or a new one (asks for the name).
-// A plain button until first use: hundreds of mounted Radix menus made tab switches lag.
 // modal={false}: a modal menu that opens a dialog ("New topic…") can leave the page unclickable.
 export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: string[]; overlay?: boolean; className?: string }) {
   const [mounted, setMounted] = useState(false);
@@ -58,10 +55,6 @@ export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: st
   );
 }
 
-/**
- * Render a long list a page at a time: `n` items now, `step` more each time the returned sentinel
- * comes within 800 px of the bottom of the scroll area. Remount (change the key) to start over.
- */
 export function useProgressive(total: number, step: number) {
   const [n, setN] = useState(step);
   const ref = useRef<HTMLDivElement>(null);
