@@ -13,7 +13,7 @@ export function Avatar({ name, className }: { name: string; className?: string }
   const src = avatars[name];
   return src
     ? <img src={src} alt="" className={cn('size-7 shrink-0 rounded-full object-cover', className)} />
-    : <span aria-hidden className={cn('grid size-7 shrink-0 place-items-center rounded-full bg-muted text-[11px] font-medium text-muted-foreground uppercase', className)}>{name.slice(0, 1)}</span>;
+    : <span aria-hidden className={cn('grid size-7 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium text-muted-foreground uppercase', className)}>{name.slice(0, 1)}</span>;
 }
 
 // Move one item to another topic, or a new one (asks for the name).
@@ -25,7 +25,7 @@ export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: st
   const cls = cn(
     'group/p flex shrink-0 items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring',
     overlay
-      ? 'h-6 max-w-32 rounded-full bg-white/15 px-2 text-[11px] text-white backdrop-blur-sm hover:bg-white/25 data-[state=open]:bg-white/25'
+      ? 'h-6 max-w-32 rounded-full bg-white/15 px-2 text-xs text-white backdrop-blur-sm hover:bg-white/25 data-[state=open]:bg-white/25'
       : 'h-7 w-36 rounded-md px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground',
     className,
   );
