@@ -27,7 +27,7 @@ export async function coverJobs() {
   const cache = await caches.open(CACHE);
   const have = new Set((await cache.keys()).map(r => r.url));
   return db.saved.filter(p => p.thumb && !have.has(key(p.id))).map(p => async () => {
-    const r = await fetch(p.thumb!, { credentials: 'omit', referrerPolicy: 'no-referrer' });
+    const r = await fetch(p.thumb, { credentials: 'omit', referrerPolicy: 'no-referrer' });
     if (r.ok) await cache.put(key(p.id), r);
   });
 }

@@ -28,10 +28,8 @@ export const sync = () => run(async () => {
   status(t('syncingSaved'));
   // ponytail: 50 pages caps the first import (~1000 posts) for good: later syncs stop at the
   // first known post, so older posts are never reached. Store next_max_id to resume if needed.
-  const backfill = db.saved.some(p => p.pic === undefined || p.thumb === undefined);
-  const saved = await fromIg<Parameters<typeof Core.slimPost>[0]>('saved', backfill ? [] : db.saved.map(x => x.id), 50);
+  const saved = await fromIg<Parameters<typeof Core.slimPost>[0]>('saved', db.lastSync.saved ? db.saved.map(x => x.id) : [], 50);
   db.saved = Core.mergeById(saved.map(Core.slimPost), db.saved);
-  for (const p of db.saved) { p.pic ??= ''; p.thumb ??= ''; }
   db.lastSync.saved = Date.now();
   await save();
   emit();
@@ -245,7 +243,12 @@ export async function clearAll() {
 }
 
 /** Stored data in any shape an older version wrote. Only upgrade() reads it. */
-type Stored = Partial<Omit<DB, 'summaries'>> & { summaries?: Parameters<typeof Core.normalizeSummaries>[0] };
+type Legacy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+type Stored = Partial<Omit<DB, 'summaries' | 'saved' | 'following'>> & {
+  summaries?: Parameters<typeof Core.normalizeSummaries>[0];
+  saved?: Legacy<Post, 'pic' | 'thumb'>[];
+  following?: Legacy<User, 'pic' | 'private'>[];
+};
 
 /** Brings any stored shape up to DB. Pure, and load() runs it on every page open, so each step must be idempotent. */
 export function upgrade(s: Stored, lang: Lang): DB {
@@ -255,11 +258,14 @@ export function upgrade(s: Stored, lang: Lang): DB {
   const settings: Settings = { ...DEFAULTS, ...old, ...(model && { model }), lang: old?.lang || lang };
   // gemini-2.x returns 404 for keys created after 2026-09-18; move saved settings off it.
   if (/^gemini-2./.test(settings.model)) settings.model = DEFAULTS.model;
-  const following = Core.uniqById(s.following ?? []);
-  const saved = Core.uniqById(s.saved ?? []);
   const lastSync = { ...s.lastSync };
+  // Posts stored before covers (thumb) or avatars (pic) existed: fill '' and refetch the whole list on the next sync.
+  if (s.saved?.some(p => p.pic === undefined || p.thumb === undefined)) lastSync.saved = 0;
+  const saved = Core.uniqById((s.saved ?? []).map(p => ({ ...p, pic: p.pic ?? '', thumb: p.thumb ?? '' })));
   // Follows stored before the friend rule (private) or avatars (pic) existed: refetch on the next sync.
-  if (following.length && (following[0].private === undefined || following[0].pic === undefined)) lastSync.following = 0;
+  const first = s.following?.[0];
+  if (first && (first.private === undefined || first.pic === undefined)) lastSync.following = 0;
+  const following = Core.uniqById((s.following ?? []).map(u => ({ ...u, pic: u.pic ?? '', private: u.private ?? false })));
   return {
     ...s, settings, following, saved, lastSync,
     summaries: Core.normalizeSummaries(s.summaries),

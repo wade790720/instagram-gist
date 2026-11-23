@@ -5,12 +5,12 @@ interface Tagged {
   id: string;
   cat?: string;
   manual?: boolean;
-  pic?: string;
+  pic: string;
 }
 export interface User extends Tagged { username: string; name: string; private: boolean; verified: boolean }
 export interface Post extends Tagged {
   code: string; user: string; caption: string; alt: string; type: PostType; takenAt: number;
-  thumb?: string;
+  thumb: string;
   w?: number;
   h?: number;
 }

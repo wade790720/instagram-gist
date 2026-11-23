@@ -74,6 +74,8 @@ test('load() upgrades every legacy shape, and loading again changes nothing', as
   assert.deepEqual(db.summaries, { 行銷: [{ id: 'd0', text: 'a', sourceIds: ['p1'] }] });
   assert.equal(db.following.length, 1);
   assert.equal(db.lastSync.following, 0);
+  assert.equal(db.saved[0].thumb, '');
+  assert.equal(db.lastSync.saved, 0);
   const once = structuredClone(db);
   await save();
   await load();
