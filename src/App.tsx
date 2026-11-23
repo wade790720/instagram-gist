@@ -40,7 +40,7 @@ export function App() {
           <StatusBar />
           <Button variant="outline" size="icon" aria-label={t('backToTop')} title={t('backToTop')}
             onClick={() => scroller.current?.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}
-            className={cn('absolute right-6 bottom-12 rounded-full bg-popover shadow-md transition-[opacity,translate] duration-200',
+            className={cn('absolute right-8 bottom-14 rounded-full bg-popover shadow-md transition-[opacity,translate] duration-200',
               top ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0')}>
             <ArrowUp />
           </Button>
@@ -59,24 +59,24 @@ function Header() {
   const count = list && (cat ? list.filter(x => x.cat === cat).length : list.length);
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-3 border-b px-6">
-      <nav className="flex min-w-0 flex-auto shrink-0 items-center gap-1.5 font-medium">
+    <header className="flex h-16 shrink-0 items-center gap-3 px-8">
+      <nav className="flex min-w-0 flex-auto shrink-0 items-center gap-2 text-lg font-semibold">
         <button className={cn('shrink-0', cat ? 'text-muted-foreground hover:text-foreground' : 'text-foreground')} onClick={() => setView({ cat: '' })}>{t(TAB_LABEL[tab])}</button>
         {cat && <>
-          <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-          <TopicDot cat={cat} />
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          <TopicDot cat={cat} className="size-2.5" />
           <span className="truncate">{cat}</span>
         </>}
-        {count !== null && <span className="ml-1 text-xs font-normal text-muted-foreground tabular-nums">{count}</span>}
+        {count !== null && <span className="ml-1 text-sm font-normal text-muted-foreground tabular-nums">{count}</span>}
       </nav>
       {untagged > 0 && onboarded() && (
-        <Button size="sm" variant="outline" className="h-7" disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
+        <Button variant="outline" className="h-10" disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
       )}
       {tab === 'following' && <ViewToggle />}
       {list && (
-        <div className="relative w-64 min-w-0 shrink-[4]">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input type="search" value={q} onChange={e => setView({ q: e.target.value })} placeholder={t('search')} aria-label={t('search')} className="h-7 pl-8 text-[13px]" />
+        <div className="relative w-72 min-w-0 shrink-[4]">
+          <Search className="pointer-events-none absolute top-1/2 left-4 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input type="search" value={q} onChange={e => setView({ q: e.target.value })} placeholder={t('search')} aria-label={t('search')} className="!pl-10" />
         </div>
       )}
     </header>
@@ -88,10 +88,10 @@ function ViewToggle() {
   const set = (followView: 'grid' | 'list') => { db.settings.followView = followView; save(); emit(); };
   const options = [['grid', LayoutGrid, t('viewGrid')], ['list', List, t('viewList')]] as const;
   return (
-    <div role="group" aria-label={t('viewAs')} className="flex h-7 shrink-0 items-center rounded-md border p-0.5">
+    <div role="group" aria-label={t('viewAs')} className="flex h-10 shrink-0 items-center gap-0.5 rounded-full bg-muted p-1">
       {options.map(([id, Icon, label]) => (
-        <Button key={id} variant="ghost" size="icon-xs" aria-pressed={v === id} aria-label={label} title={label} onClick={() => set(id)}
-          className={cn('size-6 text-muted-foreground', v === id && 'bg-accent text-foreground')}><Icon className="size-3.5" /></Button>
+        <Button key={id} variant="ghost" size="icon-sm" aria-pressed={v === id} aria-label={label} title={label} onClick={() => set(id)}
+          className={cn('text-muted-foreground hover:bg-transparent', v === id && 'tile text-foreground hover:bg-card')}><Icon className="size-4" /></Button>
       ))}
     </div>
   );
@@ -100,7 +100,7 @@ function ViewToggle() {
 function StatusBar() {
   const p = ui.progress;
   return (
-    <footer role="status" className="flex min-h-8 shrink-0 items-center gap-3 border-t px-6 py-1.5 text-xs">
+    <footer role="status" className="flex min-h-10 shrink-0 items-center gap-3 px-8 py-2 text-xs">
       <span className={cn('min-w-0 flex-1', ui.err ? 'text-destructive' : 'truncate text-muted-foreground')} title={ui.status}>{ui.status}</span>
       {p !== null && (
         <span className="relative h-1 w-32 shrink-0 overflow-hidden rounded-full bg-muted" aria-hidden>

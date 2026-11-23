@@ -16,7 +16,7 @@ const postUrl = (code: string) => `https://www.instagram.com/p/${code}/`;
 
 function DigestText({ d }: { d: Digest }) {
   return (
-    <div className="whitespace-pre-wrap leading-[1.75]">
+    <div className="max-w-[68ch] whitespace-pre-wrap leading-[1.8]">
       {d.text.split(/(\[\d+\])/).map((part, k) => {
         const n = part.match(/^\[(\d+)\]$/)?.[1];
         const p = n ? db.saved.find(x => x.id === d.sourceIds[Number(n) - 1]) : undefined;
@@ -31,13 +31,13 @@ function DigestText({ d }: { d: Digest }) {
 export function TopicDigests({ cat }: { cat: string }) {
   const list = db.summaries[cat] || [];
   if (!list.length) return (
-    <div className="flex items-center gap-3 rounded-lg border border-dashed px-4 py-3">
+    <div className="flex items-center gap-3 rounded-2xl border border-dashed border-foreground/15 px-5 py-4">
       <Sparkles className="size-4 text-muted-foreground" />
       <span className="flex-1 text-muted-foreground">{t('noDigestYet')}</span>
       <Button size="sm" onClick={() => createDigest(cat)} disabled={ui.busy}><Sparkles />{t('makeSummary')}</Button>
     </div>
   );
-  return <div className="flex flex-col gap-2">{list.map((d, i) => <DigestCard key={d.id} cat={cat} i={i} d={d} />)}</div>;
+  return <div className="flex flex-col gap-3">{list.map((d, i) => <DigestCard key={d.id} cat={cat} i={i} d={d} />)}</div>;
 }
 
 function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
@@ -48,23 +48,23 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
 
   return (
     <Collapsible open={ui.opened.has(key)} onOpenChange={o => { ui.opened[o ? 'add' : 'delete'](key); emit(); }}
-      className="group/d rounded-lg border bg-card">
-      <CollapsibleTrigger className="flex h-11 w-full items-center gap-2 rounded-lg px-3 text-left outline-none hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring">
+      className="group/d tile rounded-2xl">
+      <CollapsibleTrigger className="flex h-14 w-full items-center gap-3 rounded-2xl px-5 text-left outline-none hover:bg-foreground/[0.03] focus-visible:ring-2 focus-visible:ring-ring">
         <ChevronRight className="size-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]/d:rotate-90" />
         <span className="flex-1 truncate font-medium">{d.title ? `${cat} · ${d.title}` : t('digestTitle', cat, d.sourceIds.length)}</span>
         {fresh > 0 && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary-text">+{fresh}</span>}
         <span className="text-xs text-muted-foreground tabular-nums">{t('sources', d.sourceIds.length)}</span>
       </CollapsibleTrigger>
       <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-        <div className="border-t px-4 pt-3 pb-4">
+        <div className="border-t px-6 pt-5 pb-5">
           <DigestText d={d} />
           {!!d.notes?.length && <p className="mt-3 text-xs text-muted-foreground">{t('notesApplied', d.notes.join('；'))}</p>}
           <form className="mt-4 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); send(reviseDigest); }}>
-            <Input value={note} onChange={e => setNote(e.target.value)} placeholder={t('refinePlaceholder')} aria-label={t('refine')} className="h-8 min-w-60 flex-1" />
-            <Button type="submit" size="sm" variant="secondary" disabled={ui.busy || !note.trim()}><Sparkles />{t('refine')}</Button>
-            <Button type="button" size="sm" variant="ghost" disabled={ui.busy || !note.trim()} onClick={() => send(branchDigest)}>{t('saveAsNew')}</Button>
+            <Input value={note} onChange={e => setNote(e.target.value)} placeholder={t('refinePlaceholder')} aria-label={t('refine')} className="min-w-60 flex-1" />
+            <Button type="submit" variant="secondary" disabled={ui.busy || !note.trim()}><Sparkles />{t('refine')}</Button>
+            <Button type="button" variant="ghost" disabled={ui.busy || !note.trim()} onClick={() => send(branchDigest)}>{t('saveAsNew')}</Button>
           </form>
-          <div className="mt-3 flex flex-wrap items-center gap-1 border-t pt-3">
+          <div className="mt-4 flex flex-wrap items-center gap-1 border-t pt-4">
             {fresh
               ? <Button size="sm" variant="secondary" disabled={ui.busy} onClick={() => reviseDigest(cat, i)}><Sparkles />{t('updateSummary', fresh)}</Button>
               : <span className="px-1 text-xs text-muted-foreground">{t('upToDate')}</span>}
@@ -82,10 +82,10 @@ export function DigestsView() {
   const topics = Object.keys(db.summaries);
   if (!topics.length) return <Empty text={t('noBookmarks')} />;
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-6">
+    <div className="mx-auto flex max-w-3xl flex-col gap-10 px-8 pt-2 pb-10">
       {topics.map(cat => (
-        <section key={cat} className="flex flex-col gap-2">
-          <h2 className="flex items-center gap-2 px-1 text-xs font-medium text-muted-foreground"><TopicDot cat={cat} />{cat}</h2>
+        <section key={cat} className="flex flex-col gap-3">
+          <h2 className="flex items-center gap-2 px-1 text-sm font-semibold text-foreground"><TopicDot cat={cat} />{cat}</h2>
           <TopicDigests cat={cat} />
         </section>
       ))}

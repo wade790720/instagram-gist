@@ -15,9 +15,9 @@ export function SettingsView() {
   const set = (k: keyof typeof s) => (e: React.ChangeEvent<HTMLInputElement>) => setS({ ...s, [k]: e.target.value });
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-10 px-6 py-8">
-      <section className="flex flex-col gap-5">
-        <h2 className="text-base font-semibold">Gemini</h2>
+    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-8 pt-2 pb-10">
+      <section className="tile flex flex-col gap-6 rounded-2xl p-7">
+        <h2 className="text-lg font-semibold">Gemini</h2>
         <Field label={t('apiKey')} help={t('apiKeyHelp')}>
           <Input type="password" value={s.apiKey} onChange={set('apiKey')} placeholder="AIza…" autoComplete="off" />
         </Field>
@@ -35,8 +35,8 @@ export function SettingsView() {
         <div><Button onClick={() => saveSettings(s)}>{t('save')}</Button></div>
       </section>
 
-      <section className="flex flex-col gap-3 border-t pt-8">
-        <h2 className="text-base font-semibold">{t('sectionData')}</h2>
+      <section className="tile flex flex-col gap-4 rounded-2xl p-7">
+        <h2 className="text-lg font-semibold">{t('sectionData')}</h2>
         <p className="text-muted-foreground">{t('lastSync', when(db.lastSync.saved), when(db.lastSync.following))}</p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" disabled={ui.busy || !db.settings.apiKey} onClick={tidyTopics}><Combine />{t('tidy')}</Button>
@@ -46,13 +46,13 @@ export function SettingsView() {
         </div>
       </section>
 
-      <ClubLink className="border-t pt-8" />
+      <ClubLink className="tile rounded-2xl p-7" />
     </div>
   );
 }
 
 const Field = ({ label, help, children }: { label: string; help?: string; children: React.ReactNode }) => (
-  <label className="flex flex-col gap-1.5">
+  <label className="flex flex-col gap-2">
     <span className="font-medium">{label}</span>
     {children}
     {help && <span className="text-xs text-muted-foreground">{help}</span>}

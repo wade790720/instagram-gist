@@ -22,8 +22,8 @@ export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: st
   const cls = cn(
     'group/p flex shrink-0 items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring',
     overlay
-      ? 'h-6 max-w-32 rounded-full bg-white/15 px-2 text-xs text-white backdrop-blur-sm hover:bg-white/25 data-[state=open]:bg-white/25'
-      : 'h-7 w-36 rounded-md px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground',
+      ? 'h-7 max-w-32 rounded-full bg-white/15 px-2.5 text-xs text-white backdrop-blur-sm hover:bg-white/25 data-[state=open]:bg-white/25'
+      : 'h-9 w-40 rounded-full px-3 text-xs text-muted-foreground hover:bg-accent hover:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground',
     className,
   );
   const label = <>
