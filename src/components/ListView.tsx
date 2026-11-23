@@ -26,12 +26,12 @@ export function ListView({ tab }: { tab: 'following' | 'saved' }) {
     </Empty>
   );
 
-  const club = db.clubHint && <ClubLink className="tile mx-8 mt-6 rounded-xl px-4 py-3 max-md:mx-4" onClose={hideClubHint} />;
+  const club = db.clubHint && <ClubLink className="tile mx-8 mt-2 rounded-xl px-4 py-3 max-md:mx-4" onClose={hideClubHint} />;
 
   if (tab === 'saved') return (
     <>
       {club}
-      {cat && <div className="px-8 pt-6 max-md:px-4"><TopicDigests cat={cat} /></div>}
+      {cat && <div className="px-8 pt-2 max-md:px-4"><TopicDigests cat={cat} /></div>}
       <SavedGrid posts={shown as Post[]} cats={cats} />
     </>
   );
@@ -42,7 +42,7 @@ function UserRows({ users, cats }: { users: User[]; cats: string[] }) {
   const { n, sentinel } = useProgressive(users.length, 60);
   return (
     <>
-      <ul className="tile mx-8 my-6 rounded-xl p-1 max-md:mx-4">
+      <ul className="tile mx-8 mt-2 mb-6 rounded-xl p-1 max-md:mx-4">
         {users.slice(0, n).map(u => (
           <li key={u.id} className="group relative flex min-h-14 items-center gap-3 rounded-md px-3 py-2 transition-colors duration-[120ms] ease-[var(--ease-ui)] hover:bg-row-hover">
             <Avatar name={u.username} className="size-9" />
@@ -65,7 +65,7 @@ function UserRows({ users, cats }: { users: User[]; cats: string[] }) {
 function UserGrid({ users, cats }: { users: User[]; cats: string[] }) {
   const { n, sentinel } = useProgressive(users.length, 60);
   return (
-    <div className="px-8 py-6 max-md:px-4">
+    <div className="px-8 pt-2 pb-6 max-md:px-4">
       <ul className="grid grid-cols-[repeat(auto-fill,minmax(184px,1fr))] gap-4">
         {users.slice(0, n).map(u => (
           <li key={u.id} className="group tile relative flex flex-col items-center gap-1 rounded-xl px-4 pt-6 pb-3 text-center transition-[box-shadow,scale] duration-[120ms] ease-[var(--ease-ui)] hover:shadow-[var(--shadow-border-hover)] active:scale-[.98]">

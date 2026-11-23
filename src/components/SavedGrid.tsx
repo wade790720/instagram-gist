@@ -28,7 +28,7 @@ export function SavedGrid({ posts, cats }: { posts: Post[]; cats: string[] }) {
   }
 
   return (
-    <div ref={ref} className="px-8 py-6 max-md:px-4">
+    <div ref={ref} className="px-8 pt-2 pb-6 max-md:px-4">
       <div className="flex items-start" style={{ gap: GAP }}>
         {columns.map((c, i) => (
           <div key={i} className="flex min-w-0 flex-1 flex-col" style={{ gap: GAP }}>

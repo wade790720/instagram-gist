@@ -36,6 +36,9 @@
   --row-press: color-mix(in oklab, var(--foreground) 8%, transparent);
   --pop-shadow: 0 0 0 1px var(--border), 0 12px 32px -12px oklch(0 0 0 / 0.22);
   --ease-ui: cubic-bezier(0.2, 0, 0, 1);
+  --chip-on: color-mix(in oklab, var(--foreground) 16%, transparent);
+  --chip-on-line: color-mix(in oklab, var(--foreground) 32%, transparent);
+  --shadow-xs: 0 1px 2px -1px oklch(0 0 0 / 0.12);
   /* brand.css's destructive reads 4.1:1 on its own tints; one step darker passes 4.5:1. */
   --destructive: oklch(0.54 0.21 25);
   --shadow-border: 0px 0px 0px 1px oklch(0 0 0 / 0.06), 0px 1px 2px -1px oklch(0 0 0 / 0.06), 0px 2px 4px 0px oklch(0 0 0 / 0.04);
@@ -53,6 +56,7 @@
   --muted: oklch(0.205 0 0);
   --pop-shadow: 0 0 0 1px var(--line-strong), 0 16px 40px -12px oklch(0 0 0 / 0.7);
   --destructive: oklch(0.7 0.17 25);
+  --shadow-xs: 0 1px 2px -1px oklch(0 0 0 / 0.36);
   --shadow-border: 0 0 0 1px oklch(1 0 0 / 0.08);
   --shadow-border-hover: 0 0 0 1px oklch(1 0 0 / 0.13);
 }

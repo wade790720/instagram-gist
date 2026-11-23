@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { ArrowsRotateRight, Check, ChevronDown, Ellipsis, Gear, LayoutCellsLarge, ListUl, Magnifier, Pencil, Sparkles, TrashBin } from '@gravity-ui/icons';
 import { Popover as PopoverPrimitive } from 'radix-ui';
 import * as Core from '@/core';
@@ -70,26 +70,84 @@ export function ContextBar() {
   const list = tab === 'following' || tab === 'saved' ? db[tab] : null;
   if (!list?.length) return null;
   const untagged = list.filter(x => !x.cat).length;
-  const count = cat ? list.filter(x => x.cat === cat).length : list.length;
 
   return (
-    <div className="flex min-h-16 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 px-8 pt-5 max-md:px-4">
+    <div className="flex shrink-0 items-center gap-2 px-8 pt-5 pb-4 max-md:px-4">
       {editing && cat
         ? <div className="w-64"><TopicInput cat={cat} done={() => setEditing(false)} /></div>
-        : <TopicSwitcher list={list} />}
-      <span className="text-sm tabular-nums text-muted-foreground">{count}</span>
+        : <TopicChips list={list} />}
       {cat && !editing && <TopicMenu cat={cat} onEdit={() => setEditing(true)} />}
-      <span className="flex-1" />
+      {editing && <span className="flex-1" />}
       {untagged > 0 && onboarded() && (
-        <Button variant="outline" size="sm" aria-disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
+        <Button variant="outline" aria-disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
       )}
       {tab === 'following' && <ViewToggle />}
     </div>
   );
 }
 
-// A searchable list scales to hundreds of topics, where a row of chips stops working past a dozen.
-function TopicSwitcher({ list }: { list: Core.Item[] }) {
+const GAP = 8;
+// Same height and corner as Button (index.css), so the filter row lines up with every other control.
+const chip = 'flex h-9 shrink-0 items-center gap-1.5 rounded-[calc(var(--radius)-2px)] border px-3 text-sm font-medium whitespace-nowrap shadow-[var(--shadow-xs)] max-sm:px-2.5 transition-[background-color,border-color,color] duration-[120ms] ease-[var(--ease-ui)]';
+const chipOn = 'border-[var(--chip-on-line)] bg-[var(--chip-on)] text-foreground';
+const chipOff = 'border-line-strong bg-card text-foreground hover:bg-row-hover data-[state=open]:bg-row-active';
+
+// Priority+: every topic that fits is one click away; the rest, and search, sit behind "More".
+function TopicChips({ list }: { list: Core.Item[] }) {
+  const { cat } = ui.view;
+  const all = Core.groupCounts(list);
+  const row = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState(all.length);
+  const [tight, setTight] = useState(false);
+  // A selected topic that would be cut off moves to the front, so the row always shows where you are.
+  const sel = all.findIndex(([c]) => c === cat);
+  const ordered = sel >= fit ? [all[sel], ...all.filter((_, j) => j !== sel)] : all;
+  const order = ordered.map(([c]) => c).join('\n');
+
+  useLayoutEffect(() => {
+    const el = row.current!;
+    const measure = () => {
+      // Hidden chips stay mounted (absolutely placed) so every width is known up front.
+      const w = (q: string) => el.querySelector<HTMLElement>(q)?.offsetWidth ?? 0;
+      const widths = [...el.querySelectorAll<HTMLElement>('[data-topic]')].map(c => c.offsetWidth);
+      const more = w('[data-more]') || 80;
+      let used = w('[data-all]'), n = 0;
+      for (; n < widths.length; n++) {
+        const need = used + GAP + widths[n] + (n + 1 < widths.length ? GAP + more : 0);
+        if (need > el.clientWidth) break;
+        used += GAP + widths[n];
+      }
+      // The selected topic is pinned first and always shown. It shrinks only when nothing else fits;
+      // a shrinkable chip reports its squeezed width here, which would let more chips in and squeeze it again.
+      setFit(cat ? Math.max(n, 1) : n);
+      setTight(!!cat && n === 0);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [order, cat]);
+
+  const more = ordered.length - fit;
+  return (
+    <div ref={row} className="relative flex min-w-0 flex-1 items-center overflow-hidden py-px" style={{ gap: GAP }}>
+      <button data-all onClick={() => setView({ cat: '' })} aria-current={!cat || undefined} className={cn(chip, !cat ? chipOn : chipOff)}>
+        {t('all')}<span className="text-xs tabular-nums text-muted-foreground">{list.length}</span>
+      </button>
+      {ordered.map(([c, n], j) => (
+        <button key={c} data-topic onClick={() => setView({ cat: c })} aria-current={cat === c || undefined}
+          {...(j >= fit && { inert: true, 'aria-hidden': true })}
+          className={cn(chip, cat === c ? cn(chipOn, tight && 'min-w-0 shrink') : chipOff, j >= fit && 'invisible absolute top-0 left-0')}>
+          <TopicDot cat={c} /><span className="truncate">{c}</span><span className="text-xs tabular-nums text-muted-foreground">{n}</span>
+        </button>
+      ))}
+      {more > 0 && <TopicSwitcher list={list} more={more} />}
+    </div>
+  );
+}
+
+// The full list with search, for topics the row has no room for. Scales to hundreds of topics.
+function TopicSwitcher({ list, more }: { list: Core.Item[]; more: number }) {
   const { cat } = ui.view;
   const [open, setOpen] = useState(false);
   const [find, setFind] = useState('');
@@ -99,15 +157,14 @@ function TopicSwitcher({ list }: { list: Core.Item[] }) {
 
   return (
     <PopoverPrimitive.Root open={open} onOpenChange={o => { setOpen(o); if (!o) setFind(''); }}>
-      <PopoverPrimitive.Trigger
-        className="-ml-2 flex h-10 min-w-0 items-center gap-2 rounded-lg px-2 text-lg font-semibold tracking-[-0.01em] transition-colors duration-[120ms] hover:bg-row-hover data-[state=open]:bg-row-active">
-        {cat && <TopicDot cat={cat} className="size-2.5" />}
-        <span className="truncate">{cat || t('allTopics')}</span>
-        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+      <PopoverPrimitive.Trigger data-more aria-label={t('moreTopics', more)} className={cn(chip, chipOff, 'gap-1 pe-2.5')}>
+        {/* Narrow screens show "+3" so the selected topic keeps its full name. */}
+        <span className="max-sm:hidden">{t('moreTopics', more)}</span><span className="sm:hidden">+{more}</span>
+        <ChevronDown className="size-3.5 opacity-60" />
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
-        <PopoverPrimitive.Content align="start" sideOffset={6}
-          className="z-50 flex w-72 flex-col rounded-xl bg-popover p-1.5 text-popover-foreground shadow-[var(--pop-shadow)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
+        <PopoverPrimitive.Content align="end" sideOffset={6}
+          className="z-50 flex w-72 flex-col rounded-xl border border-transparent bg-popover p-1.5 text-popover-foreground shadow-[var(--pop-shadow)]">
           <div className="relative mb-1">
             <Magnifier className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <input autoFocus value={find} onChange={e => setFind(e.target.value)} placeholder={t('findTopic')} aria-label={t('findTopic')}
@@ -116,7 +173,6 @@ function TopicSwitcher({ list }: { list: Core.Item[] }) {
           </div>
           <div className="-mx-1.5 mb-1 border-t" />
           <div className="scroll-fade flex max-h-[min(60vh,420px)] flex-col overflow-y-auto overscroll-contain">
-            {!find.trim() && <TopicOption label={t('allTopics')} n={list.length} active={!cat} onPick={() => pick('')} />}
             {shown.map(([c, n]) => <TopicOption key={c} cat={c} label={c} n={n} active={cat === c} onPick={() => pick(c)} />)}
             {!shown.length && <p className="px-2.5 py-6 text-center text-sm text-muted-foreground">{t('noTopicMatch')}</p>}
           </div>
@@ -143,7 +199,7 @@ function TopicMenu({ cat, onEdit }: { cat: string; onEdit: () => void }) {
     // modal={false}: "Delete" opens a confirm dialog, and a modal menu can leave the page unclickable.
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={t('topicActions', cat)} disabled={ui.busy} className="text-muted-foreground hover:text-foreground"><Ellipsis /></Button>
+        <Button variant="ghost" size="icon" aria-label={t('topicActions', cat)} disabled={ui.busy} className="text-muted-foreground hover:text-foreground"><Ellipsis /></Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-40">
         <DropdownMenuItem onSelect={onEdit}><Pencil />{t('editTopic')}</DropdownMenuItem>
@@ -170,10 +226,10 @@ function ViewToggle() {
   const set = (followView: 'grid' | 'list') => { db.settings.followView = followView; save(); emit(); };
   const options = [['grid', LayoutCellsLarge, t('viewGrid')], ['list', ListUl, t('viewList')]] as const;
   return (
-    <div role="group" aria-label={t('viewAs')} className="flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-line-strong p-0.5">
+    <div role="group" aria-label={t('viewAs')} className="flex h-9 shrink-0 items-center gap-0.5 rounded-[calc(var(--radius)-2px)] border border-line-strong bg-card p-0.5 shadow-[var(--shadow-xs)]">
       {options.map(([id, Icon, label]) => (
         <Button key={id} variant="ghost" size="icon-sm" aria-pressed={v === id} aria-label={label} title={label} onClick={() => set(id)}
-          className={cn('!size-[26px] rounded-md text-muted-foreground hover:text-foreground', v === id && 'bg-row-active text-foreground hover:!bg-row-active')}><Icon className="size-4" /></Button>
+          className={cn('!size-[30px] rounded-[5px] text-muted-foreground hover:text-foreground', v === id && 'bg-row-active text-foreground hover:!bg-row-active')}><Icon className="size-4" /></Button>
       ))}
     </div>
   );
