@@ -60,8 +60,8 @@ export function Welcome() {
             <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
               <li>
                 {t('s1Open')}{' '}
-                <a className="inline-flex items-center gap-1 text-foreground underline underline-offset-4" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
-                  aistudio.google.com/apikey <ArrowUpRightFromSquare className="size-3" />
+                <a className="text-foreground underline underline-offset-4 [overflow-wrap:anywhere]" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
+                  aistudio.google.com/apikey<ArrowUpRightFromSquare className="ms-1 inline size-3 align-[-0.1em]" />
                 </a>
               </li>
               <li>{t('s1Create')}</li>

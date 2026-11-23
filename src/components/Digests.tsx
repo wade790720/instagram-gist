@@ -63,7 +63,7 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
       className="group/d tile rounded-xl">
       <CollapsibleTrigger className="flex min-h-13 w-full items-center gap-2.5 rounded-xl px-4 text-left transition-colors duration-[120ms] ease-[var(--ease-ui)] hover:bg-row-hover group-data-[state=open]/d:rounded-b-none">
         <ChevronRight className="size-4 text-muted-foreground transition-transform duration-300 ease-[var(--ease-ui)] group-data-[state=open]/d:rotate-90" />
-        <span className="flex-1 truncate font-medium">{d.title ? `${cat} · ${d.title}` : t('digestTitle', cat, d.sourceIds.length)}</span>
+        <span className="min-w-0 flex-1 py-3 font-medium">{d.title ? `${cat} · ${d.title}` : t('digestTitle', cat, d.sourceIds.length)}</span>
         {fresh > 0 && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary-text tabular-nums">+{fresh}</span>}
         <span className="text-xs text-muted-foreground tabular-nums">{t('sources', d.sourceIds.length)}</span>
       </CollapsibleTrigger>
@@ -72,7 +72,7 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
           <DigestText d={d} />
           {!!d.notes?.length && <p className="mt-5 text-xs text-muted-foreground">{t('notesApplied', d.notes.join('；'))}</p>}
           <form className="mt-6 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); send(reviseDigest); }}>
-            <Input value={note} onChange={e => setNote(e.target.value)} placeholder={t('refinePlaceholder')} aria-label={t('refine')} className="min-w-60 flex-1" />
+            <Input value={note} onChange={e => setNote(e.target.value)} placeholder={t('refinePlaceholder')} aria-label={t('refine')} className="min-w-0 flex-1 basis-60" />
             <Button type="submit" variant="secondary" disabled={ui.busy || !note.trim()}><Sparkles />{t('refine')}</Button>
             <Button type="button" variant="ghost" disabled={ui.busy || !note.trim()} onClick={() => send(branchDigest)}>{t('saveAsNew')}</Button>
           </form>

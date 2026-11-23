@@ -48,7 +48,7 @@
   "fellBack": { "message": "$1 is overloaded (503); continuing with $2…" },
   "summarizing": { "message": "Writing digest…" },
   "synced": { "message": "Synced at $1" },
-  "error": { "message": "Error: $1" },
+  "error": { "message": "Didn't finish ($1). Try again. If it keeps happening, use Report a problem in Settings." },
   "loginFirst": { "message": "Log in to instagram.com in this browser first." },
   "igFailed": { "message": "Could not read Instagram. Reload the instagram.com tab and sync again." },
   "igRefused": { "message": "Instagram turned the request down ($1). Wait a few minutes, then press Sync. Data from earlier syncs is kept." },
@@ -134,7 +134,7 @@
   "recategorize": { "message": "Re-sort" },
   "confirmResort": { "message": "Re-sort everything? This deletes all digests and sorts every item again, except topics you set by hand. It uses many Gemini calls." },
   "clearData": { "message": "Delete all data" },
-  "confirmClear": { "message": "Delete all synced lists and digests? Settings are kept." },
+  "confirmClear": { "message": "Delete all synced lists, topics and digests? Topics you set by hand go too, and you can't undo this. Settings and your API key stay." },
   "lastSync": { "message": "Last sync: saved $1 · following $2" },
   "never": { "message": "never" },
   "nextStep": { "message": "Next: you know what you save most. To turn that into a direction, take the Wonder Pocket Club classroom, Lv1 \"See yourself in your saves\"." }

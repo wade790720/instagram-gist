@@ -30,7 +30,7 @@ export function TopBar() {
       <div className="flex h-14 items-center gap-4 px-8 max-md:gap-2 max-md:px-4">
         <div className="flex shrink-0 items-center gap-2.5">
           <img src="/icons/icon-48.png" alt="" className="size-6 rounded-md" />
-          <span className="text-sm font-semibold">{t('appShortName')}</span>
+          <span className="text-sm font-semibold max-sm:sr-only">{t('appShortName')}</span>
         </div>
         <span className="flex-1" />
         {list && (
@@ -112,7 +112,7 @@ function TopicSwitcher({ list }: { list: Core.Item[] }) {
             <Magnifier className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <input autoFocus value={find} onChange={e => setFind(e.target.value)} placeholder={t('findTopic')} aria-label={t('findTopic')}
               onKeyDown={e => { if (e.key === 'Enter' && shown[0]) pick(shown[0][0]); }}
-              className="h-9 w-full rounded-md bg-transparent pr-2 pl-8 text-sm outline-none placeholder:text-muted-foreground" />
+              className="h-9 w-full rounded-md bg-transparent pr-2 pl-8 text-sm placeholder:text-muted-foreground focus-visible:outline-offset-0" />
           </div>
           <div className="-mx-1.5 mb-1 border-t" />
           <div className="scroll-fade flex max-h-[min(60vh,420px)] flex-col overflow-y-auto overscroll-contain">

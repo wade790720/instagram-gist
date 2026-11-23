@@ -14,7 +14,7 @@ export function SavedGrid({ posts, cats }: { posts: Post[]; cats: string[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(4);
   useLayoutEffect(() => {
-    const ro = new ResizeObserver(([e]) => setCols(Math.max(2, Math.floor((e.contentRect.width + GAP) / (MIN_COL_WIDTH + GAP)))));
+    const ro = new ResizeObserver(([e]) => setCols(Math.max(1, Math.floor((e.contentRect.width + GAP) / (MIN_COL_WIDTH + GAP)))));
     ro.observe(ref.current!);
     return () => ro.disconnect();
   }, []);

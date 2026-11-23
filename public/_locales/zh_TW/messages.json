@@ -48,7 +48,7 @@
   "fellBack": { "message": "$1 目前太多人使用（503），改用 $2 繼續…" },
   "summarizing": { "message": "正在寫摘要…" },
   "synced": { "message": "已同步（$1）" },
-  "error": { "message": "錯誤：$1" },
+  "error": { "message": "沒有完成（$1）。請再試一次；一直發生的話，到「設定」按「回報問題」。" },
   "loginFirst": { "message": "請先在這個瀏覽器登入 instagram.com。" },
   "igFailed": { "message": "讀不到 Instagram。重新整理 instagram.com 分頁後再同步。" },
   "igRefused": { "message": "Instagram 暫時拒絕請求（$1）。等幾分鐘再按「同步」，之前同步的資料都還在。" },
@@ -134,7 +134,7 @@
   "recategorize": { "message": "重新分類" },
   "confirmResort": { "message": "確定全部重新分類？所有摘要都會刪除，手動調整過的分類以外會重新分類，會用掉不少 Gemini 額度。" },
   "clearData": { "message": "刪除所有資料" },
-  "confirmClear": { "message": "確定刪除所有同步的清單和摘要？設定會保留。" },
+  "confirmClear": { "message": "刪除所有同步的清單、分類和摘要？手動調整過的分類也會一起刪除，而且無法復原。設定和 API key 會保留。" },
   "lastSync": { "message": "上次同步：收藏 $1 · 追蹤 $2" },
   "never": { "message": "從未" },
   "nextStep": { "message": "下一步：知道自己最常收藏什麼了，把它變成方向 → Wonder Pocket Club 課程 Lv1「從收藏看見自己」" }

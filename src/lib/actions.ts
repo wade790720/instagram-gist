@@ -11,6 +11,9 @@ const DAY = 864e5;
 const FOLLOWS_PER_CALL = 400;
 const POSTS_PER_CALL = 150;
 
+// Stops an action to tell the user something that is not a failure, so it is shown without the error prefix.
+class Notice extends Error {}
+
 export async function run(fn: () => Promise<void>) {
   if (ui.busy) return;
   Object.assign(ui, { busy: true, progress: 'busy' });
@@ -18,6 +21,7 @@ export async function run(fn: () => Promise<void>) {
   try {
     await fn();
   } catch (e) {
+    if (e instanceof Notice) { status(e.message); return; }
     status(t('error', (e as Error).message), true);
     void record(e, 'action').catch(() => {});
   }
@@ -44,7 +48,7 @@ export const sync = () => run(async () => {
     if (short && db.shortFollowing !== following.length) {
       db.shortFollowing = following.length;
       await save();
-      throw new Error(t('followingShrank', following.length, db.following.length));
+      throw new Notice(t('followingShrank', following.length, db.following.length));
     }
     delete db.shortFollowing;
     db.following = Core.keepCats(following.map(Core.slimUser), db.following);

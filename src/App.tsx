@@ -54,7 +54,7 @@ function StatusBar() {
   const p = ui.progress;
   return (
     <footer role="status" className="flex min-h-9 shrink-0 items-center gap-3 border-t px-8 py-1.5 text-xs">
-      <span className={cn('min-w-0 flex-1', ui.err ? 'text-destructive' : 'truncate text-muted-foreground')} title={ui.status}>{ui.status}</span>
+      <span className={cn('min-w-0 flex-1', ui.err ? 'text-destructive' : 'text-muted-foreground')}>{ui.status}</span>
       {p !== null && (
         <span className="relative h-1 w-32 shrink-0 overflow-hidden rounded-full bg-muted" aria-hidden>
           {p === 'busy'
@@ -78,13 +78,15 @@ function TidyDialog() {
 
   return (
     <AlertDialog open={!!plan} onOpenChange={o => { if (!o) close(); }}>
-      <AlertDialogContent className="max-h-[85vh] overflow-y-auto overscroll-contain">
+      <AlertDialogContent className="flex max-h-[85dvh] flex-col">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-base font-semibold">{t('tidy')}</AlertDialogTitle>
           <AlertDialogDescription>{plan?.merges.length ? t('tidyMergeHint') : t('tidyNoMerge')}</AlertDialogDescription>
         </AlertDialogHeader>
+        {/* Only the list scrolls, so Apply and Cancel stay in view however long the plan is. */}
+        <div className="scroll-fade -mx-6 flex min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain px-6">
         {plan?.merges.map(([from, to]) => (
-          <label key={from} className="flex items-center gap-2">
+          <label key={from} className="flex flex-wrap items-center gap-2">
             <input type="checkbox" className="size-4 accent-primary" checked={!skip.has(from)} onChange={() => toggle(from)} />
             <TopicDot cat={from} /><span>{from}</span><span className="text-xs text-muted-foreground tabular-nums">{counts[from]}</span>
             <ArrowRight className="size-3.5 text-muted-foreground" />
@@ -96,6 +98,7 @@ function TidyDialog() {
           {Object.entries(plan?.defs ?? {}).filter(([c]) => !gone.has(c)).map(([c, d]) => (
             <p key={c}><span className="font-medium">{c}</span><span className="text-muted-foreground"> · {d}</span></p>
           ))}
+        </div>
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={close}>{t('cancel')}</AlertDialogCancel>
@@ -131,7 +134,7 @@ function AskDialog() {
         )}
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => close(false)}>{t('cancel')}</AlertDialogCancel>
-          <AlertDialogAction onClick={ok} className={cn(a?.kind === 'confirm' && a.danger && 'bg-destructive text-white hover:bg-destructive/90 dark:bg-destructive/60')}>{a?.ok}</AlertDialogAction>
+          <AlertDialogAction onClick={ok} variant={a?.kind === 'confirm' && a.danger ? 'destructive' : 'default'}>{a?.ok}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
