@@ -107,7 +107,7 @@
   "tidyDone": { "message": "整理完成：合併了 $1 個分類，$2 個分類有定義。" },
   "tidyEmpty": { "message": "Gemini 沒有回傳定義，請再試一次。" },
   "recategorize": { "message": "全部重新分類" },
-  "confirmResort": { "message": "確定全部重新分類？AI 分的分類和所有摘要都會刪掉重做（你手動調整過的會保留），會用掉不少 Gemini 額度。" },
+  "confirmResort": { "message": "確定全部重新分類？所有摘要都會刪除，手動調整過的分類以外會重新分類，會用掉不少 Gemini 額度。" },
   "clearData": { "message": "刪除所有資料" },
   "confirmClear": { "message": "確定刪除所有同步的清單和摘要？設定會保留。" },
   "lastSync": { "message": "上次同步：收藏 $1 · 追蹤 $2" },
