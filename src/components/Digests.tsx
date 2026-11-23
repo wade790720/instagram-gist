@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronRight, RotateCcw, Sparkles, Trash2 } from 'lucide-react';
 import * as Core from '@/core';
 import type { Digest } from '@/core';
-import { deleteDigest, summarize, undoDigest } from '@/lib/actions';
+import { branchDigest, createDigest, deleteDigest, reviseDigest, undoDigest } from '@/lib/actions';
 import { t } from '@/lib/i18n';
 import { db, emit, ui } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ export function TopicDigests({ cat }: { cat: string }) {
     <div className="flex items-center gap-3 rounded-lg border border-dashed px-4 py-3">
       <Sparkles className="size-4 text-muted-foreground" />
       <span className="flex-1 text-muted-foreground">{t('noDigestYet')}</span>
-      <Button size="sm" onClick={() => summarize(cat)} disabled={ui.busy}><Sparkles />{t('makeSummary')}</Button>
+      <Button size="sm" onClick={() => createDigest(cat)} disabled={ui.busy}><Sparkles />{t('makeSummary')}</Button>
     </div>
   );
   return <div className="flex flex-col gap-2">{list.map((d, i) => <DigestCard key={d.id} cat={cat} i={i} d={d} />)}</div>;
@@ -44,7 +44,7 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
   const key = cat + '#' + d.id;
   const [note, setNote] = useState('');
   const fresh = Core.newSources(d, db.saved.filter(x => x.cat === cat));
-  const send = (asNew: boolean) => { if (note.trim()) { summarize(cat, i, note, asNew); setNote(''); } };
+  const send = (write: (cat: string, i: number, note: string) => Promise<void>) => { if (note.trim()) { write(cat, i, note); setNote(''); } };
 
   return (
     <Collapsible open={ui.opened.has(key)} onOpenChange={o => { ui.opened[o ? 'add' : 'delete'](key); emit(); }}
@@ -59,14 +59,14 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
         <div className="border-t px-4 pt-3 pb-4">
           <DigestText d={d} />
           {!!d.notes?.length && <p className="mt-3 text-xs text-muted-foreground">{t('notesApplied', d.notes.join('；'))}</p>}
-          <form className="mt-4 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); send(false); }}>
+          <form className="mt-4 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); send(reviseDigest); }}>
             <Input value={note} onChange={e => setNote(e.target.value)} placeholder={t('refinePlaceholder')} aria-label={t('refine')} className="h-8 min-w-60 flex-1" />
             <Button type="submit" size="sm" variant="secondary" disabled={ui.busy || !note.trim()}><Sparkles />{t('refine')}</Button>
-            <Button type="button" size="sm" variant="ghost" disabled={ui.busy || !note.trim()} onClick={() => send(true)}>{t('saveAsNew')}</Button>
+            <Button type="button" size="sm" variant="ghost" disabled={ui.busy || !note.trim()} onClick={() => send(branchDigest)}>{t('saveAsNew')}</Button>
           </form>
           <div className="mt-3 flex flex-wrap items-center gap-1 border-t pt-3">
             {fresh
-              ? <Button size="sm" variant="secondary" disabled={ui.busy} onClick={() => summarize(cat, i)}><Sparkles />{t('updateSummary', fresh)}</Button>
+              ? <Button size="sm" variant="secondary" disabled={ui.busy} onClick={() => reviseDigest(cat, i)}><Sparkles />{t('updateSummary', fresh)}</Button>
               : <span className="px-1 text-xs text-muted-foreground">{t('upToDate')}</span>}
             <span className="flex-1" />
             {d.prev && <Button size="sm" variant="ghost" disabled={ui.busy} onClick={() => undoDigest(cat, i)}><RotateCcw />{t('undo')}</Button>}

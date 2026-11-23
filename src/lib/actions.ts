@@ -144,24 +144,42 @@ export async function applyTidy(merges: [string, string][], defs: Record<string,
 
 export const sortRest = () => run(async () => { await categorize(); status(t('sortDone')); });
 
-export const summarize = (cat: string, i?: number, note = '', asNew = false) => run(async () => {
+// One digest written from the topic's saved posts. Throws before anything is stored when Gemini returns no text:
+// a blocked prompt returns none, and saving it would wipe the old digest and mark it up to date.
+async function draft(cat: string, old: Digest | undefined, notes: string[]) {
   status(t('summarizing'));
-  const list = (db.summaries[cat] ||= []);
-  const old = i === undefined ? undefined : list[i];
-  const notes = asNew ? [note.trim()] : [...(old?.notes || []), note.trim()].filter(Boolean);
   const posts = Core.orderSources(old?.sourceIds || [], db.saved.filter(x => x.cat === cat));
   const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang, notes, old?.text), false, db.settings.summaryModel, db.settings.model);
-  // A blocked prompt returns no text; saving it would wipe the old digest and mark it up to date.
   if (!text.trim()) throw new Error(t('digestEmpty'));
-  const next: Digest = { id: old && !asNew ? old.id : Date.now().toString(36), title: asNew ? note.trim() : old?.title, text, sourceIds: posts.map(p => p.id), notes, at: Date.now() };
-  if (asNew) {
-    list.push(next);
-    ui.opened.add(cat + '#' + next.id);
-  } else {
-    // ponytail: one level of undo (prev); keep a list if people want to step back further.
-    if (old) { const { prev: _, ...rest } = old; next.prev = rest; }
-    list[i ?? 0] = next;
-  }
+  return { text, sourceIds: posts.map(p => p.id), notes, at: Date.now() };
+}
+
+/** The topic's first digest, in slot 0. */
+export const createDigest = (cat: string) => run(async () => {
+  const next: Digest = { id: Date.now().toString(36), ...(await draft(cat, undefined, [])) };
+  (db.summaries[cat] ||= [])[0] = next;
+  await save();
+  status('');
+});
+
+/** Rewrites digest i with its new posts and, if given, one more instruction kept for later updates. */
+export const reviseDigest = (cat: string, i: number, note = '') => run(async () => {
+  const list = db.summaries[cat];
+  const old = list[i];
+  const next = await draft(cat, old, [...(old.notes || []), note.trim()].filter(Boolean));
+  // ponytail: one level of undo (prev); keep a list if people want to step back further.
+  const { prev: _, ...undo } = old;
+  list[i] = { ...next, id: old.id, title: old.title, prev: undo };
+  await save();
+  status('');
+});
+
+/** A new digest built from digest i and titled by the instruction; digest i stays as it is. */
+export const branchDigest = (cat: string, i: number, note: string) => run(async () => {
+  const list = db.summaries[cat];
+  const next: Digest = { ...(await draft(cat, list[i], [note.trim()])), id: Date.now().toString(36), title: note.trim() };
+  list.push(next);
+  ui.opened.add(cat + '#' + next.id);
   await save();
   status('');
 });
