@@ -38,7 +38,7 @@ export function SettingsView() {
   );
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-8 px-8 py-8">
+    <div className="mx-auto flex max-w-2xl flex-col gap-8 px-8 py-8 max-md:px-4">
       <Panel title={t('sectionAi')} help={t('sectionAiHelp')} footer={<>
         <span className="min-w-0 flex-1 text-xs text-muted-foreground">{dirty ? t('unsaved') : t('allSaved')}</span>
         <Button variant="outline" disabled={!dirty} onClick={() => setS({ ...db.settings })}>{t('cancel')}</Button>

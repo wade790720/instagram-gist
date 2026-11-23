@@ -3,7 +3,7 @@ import * as Core from '@/core';
 import type { Post, User } from '@/core';
 import { hideClubHint, sync } from '@/lib/actions';
 import { t } from '@/lib/i18n';
-import { allItems, db, ui } from '@/lib/store';
+import { allItems, db, setView, ui } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { ClubLink } from './ClubLink';
 import { Empty, TopicDigests } from './Digests';
@@ -15,18 +15,23 @@ export function ListView({ tab }: { tab: 'following' | 'saved' }) {
   const items = db[tab];
   if (!items.length) return (
     <Empty text={t('empty')}>
-      <Button onClick={sync} disabled={ui.busy}><ArrowsRotateRight />{t('sync')}</Button>
+      <Button onClick={sync} aria-disabled={ui.busy}><ArrowsRotateRight />{t('sync')}</Button>
     </Empty>
   );
   const shown = (items as (User | Post)[]).filter(x => (!cat || x.cat === cat) && (!q || Core.matches(x, q)));
   const cats = Core.groupCounts(allItems()).map(([c]) => c);
+  if (!shown.length && q) return (
+    <Empty text={t('noMatch', q)}>
+      <Button variant="outline" onClick={() => setView({ q: '' })}>{t('clearSearch')}</Button>
+    </Empty>
+  );
 
-  const club = db.clubHint && <ClubLink className="tile mx-8 mt-6 rounded-xl px-4 py-3" onClose={hideClubHint} />;
+  const club = db.clubHint && <ClubLink className="tile mx-8 mt-6 rounded-xl px-4 py-3 max-md:mx-4" onClose={hideClubHint} />;
 
   if (tab === 'saved') return (
     <>
       {club}
-      {cat && <div className="px-8 pt-6"><TopicDigests cat={cat} /></div>}
+      {cat && <div className="px-8 pt-6 max-md:px-4"><TopicDigests cat={cat} /></div>}
       <SavedGrid posts={shown as Post[]} cats={cats} />
     </>
   );
@@ -37,7 +42,7 @@ function UserRows({ users, cats }: { users: User[]; cats: string[] }) {
   const { n, sentinel } = useProgressive(users.length, 60);
   return (
     <>
-      <ul className="tile mx-8 my-6 rounded-xl p-1">
+      <ul className="tile mx-8 my-6 rounded-xl p-1 max-md:mx-4">
         {users.slice(0, n).map(u => (
           <li key={u.id} className="group relative flex min-h-14 items-center gap-3 rounded-md px-3 py-2 transition-colors duration-[120ms] ease-[var(--ease-ui)] hover:bg-row-hover">
             <Avatar name={u.username} className="size-9" />
@@ -60,7 +65,7 @@ function UserRows({ users, cats }: { users: User[]; cats: string[] }) {
 function UserGrid({ users, cats }: { users: User[]; cats: string[] }) {
   const { n, sentinel } = useProgressive(users.length, 60);
   return (
-    <div className="px-8 py-6">
+    <div className="px-8 py-6 max-md:px-4">
       <ul className="grid grid-cols-[repeat(auto-fill,minmax(184px,1fr))] gap-4">
         {users.slice(0, n).map(u => (
           <li key={u.id} className="group tile relative flex flex-col items-center gap-1 rounded-xl px-4 pt-6 pb-3 text-center transition-[box-shadow,scale] duration-[120ms] ease-[var(--ease-ui)] hover:shadow-[var(--shadow-border-hover)] active:scale-[.98]">

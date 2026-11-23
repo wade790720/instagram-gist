@@ -48,7 +48,7 @@ export function Welcome() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 px-6 py-10">
+    <div className="mx-auto max-w-2xl space-y-6 px-8 py-10 max-md:px-4">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">{t('welcomeTitle')}</h1>
         <p className="text-muted-foreground">{t('welcomeLead')}</p>
@@ -85,7 +85,7 @@ export function Welcome() {
             </ol>
             <p className="text-xs text-muted-foreground">{t('s2Time')}</p>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={sync} disabled={ui.busy}>
+              <Button onClick={sync} aria-disabled={ui.busy}>
                 <ArrowsRotateRight className={cn(ui.busy && 'animate-spin')} />{t('sync')}
               </Button>
               <Button variant="outline" asChild data-icon="end">

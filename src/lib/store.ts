@@ -17,7 +17,7 @@ export interface DB {
   shortFollowing?: number;
 }
 export type Tab = 'following' | 'saved' | 'digests' | 'settings';
-interface AskBase { msg: string; ok: string }
+interface AskBase { msg: string; ok: string; title?: string }
 export type Ask =
   | (AskBase & { kind: 'confirm'; danger?: boolean; resolve: (yes: boolean) => void })
   | (AskBase & { kind: 'text'; resolve: (text: string | null) => void });

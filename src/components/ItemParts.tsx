@@ -34,7 +34,7 @@ export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: st
   </>;
 
   // Once mounted, Radix toggles on pointer down; an onClick of our own would reopen the menu it just closed.
-  const trigger = <button type="button" className={cls} aria-label={t('moveTo')} aria-haspopup="menu" onClick={menu === 'cold' ? () => setMenu('open') : undefined}>{label}</button>;
+  const trigger = <button type="button" className={cls} aria-label={`${x.cat || t('unsorted')}, ${t('moveTo')}`} aria-haspopup="menu" onClick={menu === 'cold' ? () => setMenu('open') : undefined}>{label}</button>;
   if (menu === 'cold') return trigger;
   return (
     <DropdownMenu open={menu === 'open'} onOpenChange={o => setMenu(o ? 'open' : 'closed')} modal={false}>

@@ -40,7 +40,7 @@ export function TopBar() {
           </div>
         )}
         <div className="flex shrink-0 items-center gap-1">
-          <IconButton label={t('sync')} onClick={sync} disabled={ui.busy}>
+          <IconButton label={t('sync')} onClick={sync} busy={ui.busy}>
             <ArrowsRotateRight className={cn(ui.busy && 'animate-spin')} />
           </IconButton>
           <IconButton label={t('tabSettings')} onClick={() => setView({ tab: 'settings', cat: '' })} active={tab === 'settings'}>
@@ -49,9 +49,9 @@ export function TopBar() {
         </div>
       </div>
       {/* Section tabs sit on the header's bottom edge: an underline reads as navigation, a filled toggle as a filter. */}
-      <nav role="tablist" className="-mb-px flex gap-6 px-8 max-md:px-4">
+      <nav aria-label={t('sections')} className="-mb-px flex gap-6 px-8 max-md:px-4">
         {tabs.map(([id, label, n]) => (
-          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setView({ tab: id, cat: '' })}
+          <button key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => setView({ tab: id, cat: '' })}
             className={cn('relative flex h-10 items-center gap-1.5 text-sm font-medium transition-colors duration-[120ms]',
               'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors after:duration-[120ms]',
               tab === id ? 'text-foreground after:bg-foreground' : 'text-text-secondary after:bg-transparent hover:text-foreground')}>
@@ -81,7 +81,7 @@ export function ContextBar() {
       {cat && !editing && <TopicMenu cat={cat} onEdit={() => setEditing(true)} />}
       <span className="flex-1" />
       {untagged > 0 && onboarded() && (
-        <Button variant="outline" size="sm" disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
+        <Button variant="outline" size="sm" aria-disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
       )}
       {tab === 'following' && <ViewToggle />}
     </div>
@@ -99,7 +99,7 @@ function TopicSwitcher({ list }: { list: Core.Item[] }) {
 
   return (
     <PopoverPrimitive.Root open={open} onOpenChange={o => { setOpen(o); if (!o) setFind(''); }}>
-      <PopoverPrimitive.Trigger aria-label={t('switchTopic')}
+      <PopoverPrimitive.Trigger
         className="-ml-2 flex h-10 min-w-0 items-center gap-2 rounded-lg px-2 text-lg font-semibold tracking-[-0.01em] transition-colors duration-[120ms] hover:bg-row-hover data-[state=open]:bg-row-active">
         {cat && <TopicDot cat={cat} className="size-2.5" />}
         <span className="truncate">{cat || t('allTopics')}</span>
@@ -143,7 +143,7 @@ function TopicMenu({ cat, onEdit }: { cat: string; onEdit: () => void }) {
     // modal={false}: "Delete" opens a confirm dialog, and a modal menu can leave the page unclickable.
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={t('editCat', cat)} disabled={ui.busy} className="text-muted-foreground hover:text-foreground"><Ellipsis /></Button>
+        <Button variant="ghost" size="icon-sm" aria-label={t('topicActions', cat)} disabled={ui.busy} className="text-muted-foreground hover:text-foreground"><Ellipsis /></Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-40">
         <DropdownMenuItem onSelect={onEdit}><Pencil />{t('editTopic')}</DropdownMenuItem>
@@ -153,11 +153,11 @@ function TopicMenu({ cat, onEdit }: { cat: string; onEdit: () => void }) {
   );
 }
 
-function IconButton({ label, onClick, disabled, active, children }: { label: string; onClick: () => void; disabled?: boolean; active?: boolean; children: React.ReactNode }) {
+function IconButton({ label, onClick, busy, active, children }: { label: string; onClick: () => void; busy?: boolean; active?: boolean; children: React.ReactNode }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon" onClick={onClick} disabled={disabled} aria-label={label} aria-pressed={active}
+        <Button variant="ghost" size="icon" onClick={onClick} aria-disabled={busy || undefined} aria-label={label} aria-pressed={active}
           className={cn('shrink-0 text-text-secondary hover:text-foreground', active && 'bg-row-active text-foreground')}>{children}</Button>
       </TooltipTrigger>
       <TooltipContent side="bottom">{label}</TooltipContent>

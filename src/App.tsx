@@ -38,7 +38,7 @@ export function App() {
           <StatusBar />
           <Button variant="outline" size="icon" aria-label={t('backToTop')} title={t('backToTop')}
             onClick={() => scroller.current?.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}
-            className={cn('absolute right-8 bottom-14 rounded-full bg-popover shadow-md transition-[opacity,translate] duration-200',
+            className={cn('absolute right-8 bottom-14 rounded-full max-md:right-4 bg-popover shadow-md transition-[opacity,translate] duration-200',
               top ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0')}>
             <ArrowUp />
           </Button>
@@ -53,7 +53,7 @@ export function App() {
 function StatusBar() {
   const p = ui.progress;
   return (
-    <footer role="status" className="flex min-h-9 shrink-0 items-center gap-3 border-t px-8 py-1.5 text-xs">
+    <footer role="status" className="flex min-h-9 shrink-0 items-center gap-3 border-t px-8 py-1.5 text-xs max-md:px-4">
       <span className={cn('min-w-0 flex-1', ui.err ? 'text-destructive' : 'text-muted-foreground')}>{ui.status}</span>
       {p !== null && (
         <span className="relative h-1 w-32 shrink-0 overflow-hidden rounded-full bg-muted" aria-hidden>
@@ -125,7 +125,7 @@ function AskDialog() {
     <AlertDialog open={!!a} onOpenChange={o => { if (!o) close(false); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-base font-semibold">{a?.ok}</AlertDialogTitle>
+          <AlertDialogTitle className="text-base font-semibold">{a?.title ?? a?.ok}</AlertDialogTitle>
           <AlertDialogDescription className="whitespace-pre-wrap">{a?.msg}</AlertDialogDescription>
         </AlertDialogHeader>
         {a?.kind === 'text' && (

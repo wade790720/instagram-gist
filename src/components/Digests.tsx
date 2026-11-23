@@ -46,7 +46,7 @@ export function TopicDigests({ cat }: { cat: string }) {
     <div className="flex items-center gap-3 rounded-xl border border-dashed border-line-strong px-4 py-3">
       <Sparkles className="size-4 text-muted-foreground" />
       <span className="flex-1 text-muted-foreground">{t('noDigestYet')}</span>
-      <Button size="sm" onClick={() => createDigest(cat)} disabled={ui.busy}><Sparkles />{t('makeSummary')}</Button>
+      <Button size="sm" onClick={() => createDigest(cat)} aria-disabled={ui.busy}><Sparkles />{t('makeSummary')}</Button>
     </div>
   );
   return <div className="flex flex-col gap-3">{list.map((d, i) => <DigestCard key={d.id} cat={cat} i={i} d={d} />)}</div>;
@@ -62,12 +62,12 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
     <Collapsible open={ui.opened.has(key)} onOpenChange={o => { ui.opened[o ? 'add' : 'delete'](key); emit(); }}
       className="group/d tile rounded-xl">
       <CollapsibleTrigger className="flex min-h-13 w-full items-center gap-2.5 rounded-xl px-4 text-left transition-colors duration-[120ms] ease-[var(--ease-ui)] hover:bg-row-hover group-data-[state=open]/d:rounded-b-none">
-        <ChevronRight className="size-4 text-muted-foreground transition-transform duration-300 ease-[var(--ease-ui)] group-data-[state=open]/d:rotate-90" />
+        <ChevronRight className="size-4 text-muted-foreground group-data-[state=open]/d:rotate-90" />
         <span className="min-w-0 flex-1 py-3 font-medium">{d.title ? `${cat} · ${d.title}` : t('digestTitle', cat, d.sourceIds.length)}</span>
         {fresh > 0 && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary-text tabular-nums">+{fresh}</span>}
         <span className="text-xs text-muted-foreground tabular-nums">{t('sources', d.sourceIds.length)}</span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+      <CollapsibleContent>
         <div className="border-t px-6 pt-5 pb-5">
           <DigestText d={d} />
           {!!d.notes?.length && <p className="mt-5 text-xs text-muted-foreground">{t('notesApplied', d.notes.join('；'))}</p>}
@@ -94,7 +94,7 @@ export function DigestsView() {
   const topics = Object.keys(db.summaries);
   if (!topics.length) return <Empty text={t('noBookmarks')} />;
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-8 py-8">
+    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-8 py-8 max-md:px-4">
       {topics.map(cat => (
         <section key={cat} className="flex flex-col gap-3">
           <h2 className="flex items-center gap-2 px-2 text-base font-semibold tracking-[-0.01em] text-foreground"><TopicDot cat={cat} />{cat}</h2>

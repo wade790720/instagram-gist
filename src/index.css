@@ -29,7 +29,8 @@
   --text-secondary: color-mix(in oklab, var(--foreground) 80%, transparent);
   --border: color-mix(in oklab, var(--foreground) 9%, transparent);
   --line-strong: color-mix(in oklab, var(--foreground) 14%, transparent);
-  --input: var(--line-strong);
+  /* Field boundaries need 3:1 against the card; the 14% hairline only reached 1.3:1. */
+  --input: color-mix(in oklab, var(--foreground) 45%, var(--card));
   --row-hover: color-mix(in oklab, var(--foreground) 5%, transparent);
   --row-active: color-mix(in oklab, var(--foreground) 9%, transparent);
   --row-press: color-mix(in oklab, var(--foreground) 8%, transparent);
@@ -155,7 +156,7 @@
 [data-slot="input"], [data-slot="select-trigger"] {
   height: 2.25rem;
   border-radius: calc(var(--radius) - 2px);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--input);
   padding-inline: 0.75rem;
   font-size: var(--text-sm);
   background-color: var(--card);
@@ -188,3 +189,9 @@
 }
 
 @keyframes indeterminate { from { left: -33%; } to { left: 100%; } }
+
+/* brand.css shortens animations to 0.01ms under reduced motion; an infinite spinner then flickers.
+   One iteration lets it settle. shortcut: belongs in the canonical brand.css, move it there on the next sync. */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { animation-iteration-count: 1 !important; }
+}

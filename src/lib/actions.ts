@@ -196,7 +196,7 @@ export async function undoDigest(cat: string, i: number) {
 }
 
 export async function deleteDigest(cat: string, i: number) {
-  if (!(await askConfirm({ msg: t('confirmDeleteDigest'), ok: t('deleteDigest'), danger: true }))) return;
+  if (!(await askConfirm({ title: t('deleteDigestTitle'), msg: t('confirmDeleteDigest'), ok: t('deleteDigestOk'), danger: true }))) return;
   const list = db.summaries[cat];
   list.splice(i, 1);
   if (!list.length) delete db.summaries[cat];
@@ -215,7 +215,7 @@ export async function renameTopic(from: string, to: string) {
 
 export async function deleteTopic(cat: string) {
   const n = allItems().filter(x => x.cat === cat).length;
-  if (!(await askConfirm({ msg: t('confirmDeleteCat', cat, n), ok: t('deleteCat'), danger: true })) || ui.busy) return;
+  if (!(await askConfirm({ title: t('deleteCatTitle', cat), msg: t('confirmDeleteCat', cat, n), ok: t('deleteCatOk'), danger: true })) || ui.busy) return;
   Core.deleteCat(allItems(), db.summaries, cat);
   delete db.defs[cat];
   if (ui.view.cat === cat) ui.view.cat = '';
