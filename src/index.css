@@ -199,3 +199,27 @@
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { animation-iteration-count: 1 !important; }
 }
+
+/* Digest content has four meanings: key point, how it works, what to do, what to watch. The frame stays neutral.
+   Same values as brand-digest. -text is for words, the plain token for marks. */
+:root {
+  --tone-key: #e48233; --tone-key-text: #974c02;
+  --tone-method: #59a0f9; --tone-method-text: #2b64a8;
+  --tone-action: #23ba7d; --tone-action-text: #00764c;
+  --tone-caution: #da76bb; --tone-caution-text: #904379;
+}
+.dark {
+  --tone-key: #d87725; --tone-key-text: #ffaf78;
+  --tone-method: #4e95ed; --tone-method-text: #9cc7ff;
+  --tone-action: #03af73; --tone-action-text: #74dda8;
+  --tone-caution: #cf6bb0; --tone-caution-text: #faa3de;
+}
+.digest-line { --tone: var(--tone-method); --tone-text: var(--tone-method-text); }
+.digest-line[data-tone="key"] { --tone: var(--tone-key); --tone-text: var(--tone-key-text); }
+.digest-line[data-tone="action"] { --tone: var(--tone-action); --tone-text: var(--tone-action-text); }
+.digest-line[data-tone="caution"] { --tone: var(--tone-caution); --tone-text: var(--tone-caution-text); }
+.digest-tag {
+  display: inline-flex; align-items: center; gap: 0.25rem; height: 1.375rem; margin-inline-end: 0.5rem; padding-inline: 0.4375rem;
+  border-radius: 0.375rem; vertical-align: 0.1em; font-size: var(--text-xs); line-height: 1; font-weight: 500;
+  color: var(--tone-text); background: color-mix(in oklab, var(--tone) 16%, var(--card));
+}

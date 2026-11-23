@@ -218,6 +218,22 @@ test("digestLines splits bullets, nesting and a short lead label, and drops blan
   ]);
 });
 
+test("digestLines reads a tone tag, passes it to sub-points, and leaves untagged digests alone", () => {
+  assert.deepEqual(C.digestLines('• 留意｜定價：別太低 [1]\n   ◦ 先看成本 [2]\n• 一般內容 [3]\n   ◦ 子項目'), [
+    { depth: 0, bullet: true, tone: 'caution', lead: '定價', body: '別太低 [1]' },
+    { depth: 1, bullet: true, tone: 'caution', body: '先看成本 [2]' },
+    { depth: 0, bullet: true, body: '一般內容 [3]' },
+    { depth: 1, bullet: true, body: '子項目' },
+  ]);
+  assert.equal(C.digestLines('• Do | Ship it: today [1]')[0].tone, 'action');
+  assert.equal(C.digestLines('• 其他｜不是標籤')[0].tone, undefined);
+});
+
+test("summaryPrompt asks for the four tags in the digest language", () => {
+  const prompt = C.summaryPrompt('行銷', [], 'zh');
+  for (const tag of ['重點', '做法', '照做', '留意']) assert.ok(prompt.includes(tag));
+});
+
 test("digestLines leaves a long sentence with a colon as body, not a lead", () => {
   const [l] = C.digestLines('• 這是一個很長很長的句子，裡面剛好也有冒號出現在後面：然後繼續 [1]');
   assert.equal(l.lead, undefined);

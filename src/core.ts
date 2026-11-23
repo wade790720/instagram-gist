@@ -49,11 +49,11 @@ interface IgUser { id?: string; pk?: number | string; username: string; full_nam
 const TYPES: Record<number, PostType> = { 1: 'image', 2: 'video', 8: 'carousel' };
 const LANGS = {
   zh: {
-    name: 'Traditional Chinese (Taiwan)', other: '其他', friends: '好友', nameRule: 'exactly 2 Chinese characters',
+    name: 'Traditional Chinese (Taiwan)', other: '其他', friends: '好友', tones: { key: '重點', method: '做法', action: '照做', caution: '留意' }, nameRule: 'exactly 2 Chinese characters',
     topics: ['行銷', '商業', '科技', '設計', '藝術', '攝影', '時尚', '美食', '旅遊', '生活', '娛樂', '音樂', '心靈', '運動'],
   },
   en: {
-    name: 'English', other: 'Other', friends: 'Friends', nameRule: 'one or two words',
+    name: 'English', other: 'Other', friends: 'Friends', tones: { key: 'Key', method: 'How', action: 'Do', caution: 'Watch' }, nameRule: 'one or two words',
     topics: ['Marketing', 'Business', 'Tech', 'Design', 'Art', 'Photography', 'Fashion', 'Food', 'Travel', 'Lifestyle', 'Entertainment', 'Music', 'Wellbeing', 'Sports'],
   },
 };
@@ -195,7 +195,9 @@ export function summaryPrompt(cat: string, posts: Post[], l: string, notes: stri
   return [
     `These are Instagram posts a user saved under the topic "${cat}".`,
     `Write a digest in ${L.name} so the user does not need to open each post.`,
-    '- Plain text, no Markdown. Use "• " bullets.',
+    '- Plain text, no Markdown. Use "• " bullets, and "   ◦ " for sub-points under a bullet.',
+    `- Start every "• " bullet with one tag, then "｜", a short label, a colon and the content, e.g. "• ${L.tones.key}｜Label: content [1]".`,
+    `- Tags: ${L.tones.key} = the main insight. ${L.tones.method} = how something works. ${L.tones.action} = a concrete step to do. ${L.tones.caution} = a pitfall, limit or risk.`,
     '- Merge overlapping points. Keep concrete steps, numbers, names, places and tools.',
     '- End every bullet with its source numbers, e.g. [2][5].',
     '- Skip greetings, ads and filler.',
@@ -318,15 +320,26 @@ export function normalizeSummaries(all: Record<string, Digest[] | Omit<Digest, '
 }
 
 /** One line of a digest, parsed for layout. `lead` is a short label before a colon ("刻滑：…"). */
-export interface DigestLine { depth: 0 | 1; bullet: boolean; lead?: string; body: string }
+export type DigestTone = keyof typeof LANGS.zh.tones;
+export interface DigestLine { depth: 0 | 1; bullet: boolean; tone?: DigestTone; lead?: string; body: string }
+
+export const toneLabel = (tone: DigestTone, l: string) => lang(l).tones[tone];
+const toneOfTag = (tag: string) =>
+  Object.values(LANGS).flatMap(L => Object.entries(L.tones)).find(([, word]) => word === tag)?.[0] as DigestTone | undefined;
 
 export function digestLines(text: string): DigestLine[] {
+  let parentTone: DigestTone | undefined;
   return text.split('\n').filter(l => l.trim()).map(line => {
     const m = line.match(/^(\s*)([•◦▪‣*-])\s+/);
     const depth = m && (m[1].length >= 2 || '◦▪‣'.includes(m[2])) ? 1 : 0;
-    const rest = m ? line.slice(m[0].length) : line.trim();
+    const raw = m ? line.slice(m[0].length) : line.trim();
+    const tagged = depth ? null : raw.match(/^([^｜|\s]{1,6})\s*[｜|]\s*/);
+    const own = tagged ? toneOfTag(tagged[1]) : undefined;
+    if (!depth) parentTone = own;
+    const tone = depth ? parentTone : own;
+    const rest = own ? raw.slice(tagged![0].length) : raw;
     const lead = rest.match(/^([^：:[\]]{2,20})[：:]\s*/);
-    return { depth, bullet: !!m, ...(lead && { lead: lead[1] }), body: lead ? rest.slice(lead[0].length) : rest };
+    return { depth, bullet: !!m, ...(tone && { tone }), ...(lead && { lead: lead[1] }), body: lead ? rest.slice(lead[0].length) : rest };
   });
 }
 

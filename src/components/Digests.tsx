@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRotateLeft, ChevronRight, Sparkles, TrashBin } from '@gravity-ui/icons';
+import { ArrowRotateLeft, Bulb, ChevronRight, Compass, ListCheck, Sparkles, TrashBin, TriangleExclamation } from '@gravity-ui/icons';
 import * as Core from '@/core';
 import type { Digest } from '@/core';
 import { branchDigest, createDigest, deleteDigest, reviseDigest, undoDigest } from '@/lib/actions';
@@ -26,16 +26,22 @@ function WithSources({ text, d }: { text: string; d: Digest }) {
   });
 }
 
+const TONE_ICON: Record<Core.DigestTone, typeof Bulb> = { key: Bulb, method: Compass, action: ListCheck, caution: TriangleExclamation };
+
 function DigestText({ d }: { d: Digest }) {
   return (
     <div className="flex max-w-[42em] flex-col text-base leading-[1.85] text-foreground/90">
-      {Core.digestLines(d.text).map((l, k) => (
-        <p key={k} className={cn('relative', l.bullet && 'pl-5', l.depth ? 'mt-1 ml-5 text-sm leading-[1.8] text-text-secondary' : k > 0 && 'mt-3.5')}>
-          {l.bullet && <span aria-hidden className={cn('absolute left-1 top-[0.72em] size-1.5 rounded-full', l.depth ? 'border-[1.5px] border-current opacity-60' : 'bg-primary-text')} />}
-          {l.lead && <strong className="font-semibold text-foreground">{l.lead}{db.settings.lang === 'zh' ? '：' : ': '}</strong>}
-          <WithSources text={l.body} d={d} />
-        </p>
-      ))}
+      {Core.digestLines(d.text).map((l, k) => {
+        const Icon = l.tone && !l.depth ? TONE_ICON[l.tone] : null;
+        return (
+          <p key={k} data-tone={l.tone ?? 'method'} className={cn('digest-line relative', l.bullet && !Icon && 'pl-5', l.depth ? 'mt-1 ml-5 text-sm leading-[1.8] text-text-secondary' : k > 0 && 'mt-4')}>
+            {l.bullet && !Icon && <span aria-hidden className={cn('absolute left-1 top-[0.72em] size-1.5 rounded-full', l.depth ? 'border-[1.5px] border-[var(--tone)]' : 'bg-[var(--tone)]')} />}
+            {Icon && <span className="digest-tag"><Icon aria-hidden className="size-3" />{Core.toneLabel(l.tone!, db.settings.lang)}</span>}
+            {l.lead && <strong className="font-semibold text-[var(--tone-text)]">{l.lead}{db.settings.lang === 'zh' ? '：' : ': '}</strong>}
+            <WithSources text={l.body} d={d} />
+          </p>
+        );
+      })}
     </div>
   );
 }
