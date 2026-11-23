@@ -20,10 +20,10 @@ export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: st
   // 'cold' is a plain button: mounting the Radix menu up front made 600 cards render 6x slower (727 vs 117 ms, dev build).
   const [menu, setMenu] = useState<'cold' | 'open' | 'closed'>('cold');
   const cls = cn(
-    'group/p flex shrink-0 items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring',
+    'group/p flex shrink-0 items-center gap-1.5 font-medium transition-[background-color,color,scale] duration-[120ms] ease-[var(--ease-ui)] active:scale-[.98]',
     overlay
-      ? 'h-7 max-w-32 rounded-full bg-white/15 px-2.5 text-xs text-white backdrop-blur-sm hover:bg-white/25 data-[state=open]:bg-white/25'
-      : 'h-9 w-40 rounded-full px-3 text-xs text-muted-foreground hover:bg-accent hover:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground',
+      ? 'h-7 max-w-32 rounded-md bg-black/35 px-2 text-xs text-white backdrop-blur-sm hover:bg-black/50 data-[state=open]:bg-black/50'
+      : 'h-8 w-40 rounded-md px-2.5 text-xs text-text-secondary hover:bg-row-hover hover:text-foreground data-[state=open]:bg-row-active data-[state=open]:text-foreground',
     className,
   );
   const label = <>

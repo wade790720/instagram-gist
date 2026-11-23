@@ -59,24 +59,24 @@ function Header() {
   const count = list && (cat ? list.filter(x => x.cat === cat).length : list.length);
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 px-8">
-      <nav className="flex min-w-0 flex-auto shrink-0 items-center gap-2 text-lg font-semibold">
-        <button className={cn('shrink-0', cat ? 'text-muted-foreground hover:text-foreground' : 'text-foreground')} onClick={() => setView({ cat: '' })}>{t(TAB_LABEL[tab])}</button>
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b px-8">
+      <nav className="flex min-w-0 flex-auto shrink-0 items-center gap-2 text-base font-semibold">
+        <button className={cn('shrink-0 rounded-lg transition-colors duration-150', cat ? 'text-muted-foreground hover:text-foreground' : 'text-foreground')} onClick={() => setView({ cat: '' })}>{t(TAB_LABEL[tab])}</button>
         {cat && <>
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
           <TopicDot cat={cat} className="size-2.5" />
           <span className="truncate">{cat}</span>
         </>}
-        {count !== null && <span className="ml-1 text-sm font-normal text-muted-foreground tabular-nums">{count}</span>}
+        {count !== null && <span className="ml-0.5 text-xs font-normal text-muted-foreground tabular-nums">{count}</span>}
       </nav>
       {untagged > 0 && onboarded() && (
-        <Button variant="outline" className="h-10" disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
+        <Button variant="outline" disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
       )}
       {tab === 'following' && <ViewToggle />}
       {list && (
         <div className="relative w-72 min-w-0 shrink-[4]">
-          <Search className="pointer-events-none absolute top-1/2 left-4 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input type="search" value={q} onChange={e => setView({ q: e.target.value })} placeholder={t('search')} aria-label={t('search')} className="!pl-10" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input type="search" value={q} onChange={e => setView({ q: e.target.value })} placeholder={t('search')} aria-label={t('search')} className="!pl-9" />
         </div>
       )}
     </header>
@@ -88,10 +88,10 @@ function ViewToggle() {
   const set = (followView: 'grid' | 'list') => { db.settings.followView = followView; save(); emit(); };
   const options = [['grid', LayoutGrid, t('viewGrid')], ['list', List, t('viewList')]] as const;
   return (
-    <div role="group" aria-label={t('viewAs')} className="flex h-10 shrink-0 items-center gap-0.5 rounded-full bg-muted p-1">
+    <div role="group" aria-label={t('viewAs')} className="flex h-9 shrink-0 items-center gap-0.5 rounded-lg border border-line-strong p-0.5">
       {options.map(([id, Icon, label]) => (
         <Button key={id} variant="ghost" size="icon-sm" aria-pressed={v === id} aria-label={label} title={label} onClick={() => set(id)}
-          className={cn('text-muted-foreground hover:bg-transparent', v === id && 'tile text-foreground hover:bg-card')}><Icon className="size-4" /></Button>
+          className={cn('!size-[28px] rounded-md text-muted-foreground hover:text-foreground', v === id && 'bg-row-active text-foreground hover:!bg-row-active')}><Icon className="size-4" /></Button>
       ))}
     </div>
   );
@@ -100,7 +100,7 @@ function ViewToggle() {
 function StatusBar() {
   const p = ui.progress;
   return (
-    <footer role="status" className="flex min-h-10 shrink-0 items-center gap-3 px-8 py-2 text-xs">
+    <footer role="status" className="flex min-h-9 shrink-0 items-center gap-3 border-t px-8 py-1.5 text-xs">
       <span className={cn('min-w-0 flex-1', ui.err ? 'text-destructive' : 'truncate text-muted-foreground')} title={ui.status}>{ui.status}</span>
       {p !== null && (
         <span className="relative h-1 w-32 shrink-0 overflow-hidden rounded-full bg-muted" aria-hidden>
@@ -127,7 +127,7 @@ function TidyDialog() {
     <AlertDialog open={!!plan} onOpenChange={o => { if (!o) close(); }}>
       <AlertDialogContent className="max-h-[85vh] overflow-y-auto overscroll-contain">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-base">{t('tidy')}</AlertDialogTitle>
+          <AlertDialogTitle className="text-base font-semibold">{t('tidy')}</AlertDialogTitle>
           <AlertDialogDescription>{plan?.merges.length ? t('tidyMergeHint') : t('tidyNoMerge')}</AlertDialogDescription>
         </AlertDialogHeader>
         {plan?.merges.map(([from, to]) => (
@@ -169,7 +169,7 @@ function AskDialog() {
     <AlertDialog open={!!a} onOpenChange={o => { if (!o) close(false); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-base">{a?.ok}</AlertDialogTitle>
+          <AlertDialogTitle className="text-base font-semibold">{a?.ok}</AlertDialogTitle>
           <AlertDialogDescription className="whitespace-pre-wrap">{a?.msg}</AlertDialogDescription>
         </AlertDialogHeader>
         {a?.kind === 'text' && (

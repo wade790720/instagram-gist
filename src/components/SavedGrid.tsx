@@ -28,7 +28,7 @@ export function SavedGrid({ posts, cats }: { posts: Post[]; cats: string[] }) {
   }
 
   return (
-    <div ref={ref} className="px-8 pt-2 pb-8">
+    <div ref={ref} className="px-8 py-6">
       <div className="flex items-start" style={{ gap: GAP }}>
         {columns.map((c, i) => (
           <div key={i} className="flex min-w-0 flex-1 flex-col" style={{ gap: GAP }}>
@@ -45,17 +45,17 @@ function Card({ p, cats }: { p: Post; cats: string[] }) {
   const src = useThumb(p);
   const TypeIcon = p.type === 'video' ? Play : p.type === 'carousel' ? Copy : null;
   return (
-    <div className="group tile relative overflow-hidden rounded-2xl bg-muted transition-[translate,box-shadow] duration-200 ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-[var(--tile-shadow-hover)]" style={{ aspectRatio: `1 / ${ratio(p)}` }}>
+    <div className="group tile relative overflow-hidden rounded-xl bg-muted transition-[border-color,scale] duration-[120ms] ease-[var(--ease-ui)] hover:border-line-strong active:scale-[.98]" style={{ aspectRatio: `1 / ${ratio(p)}` }}>
       {src
         ? <img src={src} alt="" className="absolute inset-0 size-full object-cover" />
-        : <p className="absolute inset-0 line-clamp-[9] p-4 text-sm leading-6 text-muted-foreground">{p.caption || p.alt}</p>}
+        : <p className="absolute inset-0 line-clamp-[9] p-4 pr-10 text-sm leading-6 text-muted-foreground">{p.caption || p.alt}</p>}
       <a href={`https://www.instagram.com/p/${p.code}/`} target="_blank" rel="noreferrer" title={p.caption.slice(0, 200)}
-        aria-label={t('openPost', p.user)} className="absolute inset-0 z-10 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" />
+        aria-label={t('openPost', p.user)} className="absolute inset-0 z-10 rounded-xl focus-visible:outline-offset-[-2px]" />
       {TypeIcon && <TypeIcon aria-hidden className="pointer-events-none absolute top-3 right-3 z-10 size-4 fill-white/90 text-white drop-shadow-md" />}
       <div className={cn('pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-center gap-2 px-3 pb-3', src ? 'bg-gradient-to-t from-black/85 via-black/50 to-transparent pt-12' : 'bg-gradient-to-t from-card from-60% to-transparent pt-8')}>
         <Avatar name={p.user} className={cn('size-6 text-[10px]', src && 'ring-1 ring-white/30')} />
         <span className={cn('min-w-0 flex-1 truncate text-xs font-medium', src ? 'text-white' : 'text-foreground')}>@{p.user}</span>
-        <div className="pointer-events-auto"><TopicPicker x={p} cats={cats} overlay={!!src} className={src ? undefined : 'h-7 w-auto max-w-32 bg-muted'} /></div>
+        <div className="pointer-events-auto"><TopicPicker x={p} cats={cats} overlay={!!src} className={src ? undefined : 'h-7 w-auto max-w-32 bg-row-hover'} /></div>
       </div>
     </div>
   );

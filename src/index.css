@@ -1,74 +1,174 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./brand.css";
+@import "@fontsource-variable/geist";
 
-/* Comfort theme after React Bits Pro's Sorbet style: warm trays with raised tiles, filled fields,
-   pill controls and a larger type scale. Lightness follows brand.css; only hue and chroma are warmed. */
+/* Flat theme, measured from React Bits Pro Application UI, Default style (docs/app-ui/app-shell, app-shell-1):
+   monochrome neutrals, 1px hairlines instead of raised shadows, tinted hover and current states,
+   120ms transitions on cubic-bezier(0.2, 0, 0, 1), 0.98 press, Geist. Sizes and type stay a step roomier
+   than the measured 32px controls. brand.css, button.tsx and input.tsx are shared modules: everything
+   here overrides them from outside. */
 :root {
-  --primary: #ab4aba; --ring: #ab4aba; --primary-text: #953ea3;
-  --radius: 0.75rem;
-  --background: oklch(0.972 0.007 75);
-  --foreground: oklch(0.24 0.012 60);
-  --card: oklch(0.995 0.003 75);
-  --popover: oklch(0.995 0.003 75);
-  --secondary: oklch(0.935 0.01 75);
-  --muted: oklch(0.935 0.01 75);
-  --muted-foreground: oklch(0.49 0.016 60);
-  --accent: oklch(0.925 0.012 75);
-  --border: oklch(0.3 0.02 60 / 0.1);
-  --input: oklch(0.3 0.02 60 / 0.14);
-  --sidebar: oklch(0.952 0.01 75);
-  --sidebar-foreground: oklch(0.38 0.014 60);
-  --tile-shadow: 0 1px 2px oklch(0.3 0.03 60 / 0.06), 0 6px 16px -8px oklch(0.3 0.03 60 / 0.16);
-  --tile-shadow-hover: 0 2px 4px oklch(0.3 0.03 60 / 0.08), 0 12px 28px -10px oklch(0.3 0.03 60 / 0.24);
+  --primary: #966570; --ring: #966570; --primary-text: #84565f;
+  --soft: color-mix(in oklab, var(--primary) 11%, var(--card));
+  --soft-hover: color-mix(in oklab, var(--primary) 17%, var(--card));
+  --soft-press: color-mix(in oklab, var(--primary) 23%, var(--card));
+  --soft-line: color-mix(in oklab, var(--primary) 30%, transparent);
+  --soft-text: #6f4a53;
+  --radius: 0.625rem;
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.205 0 0);
+  --card: oklch(1 0 0);
+  --popover: oklch(1 0 0);
+  --sidebar: oklch(0.97 0 0);
+  --secondary: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --muted: oklch(0.96 0 0);
+  --accent: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --muted-foreground: color-mix(in oklab, var(--foreground) 62%, var(--background));
+  --sidebar-foreground: color-mix(in oklab, var(--foreground) 80%, transparent);
+  --text-secondary: color-mix(in oklab, var(--foreground) 80%, transparent);
+  --border: color-mix(in oklab, var(--foreground) 9%, transparent);
+  --line-strong: color-mix(in oklab, var(--foreground) 14%, transparent);
+  --input: var(--line-strong);
+  --row-hover: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --row-active: color-mix(in oklab, var(--foreground) 9%, transparent);
+  --row-press: color-mix(in oklab, var(--foreground) 8%, transparent);
+  --pop-shadow: 0 0 0 1px var(--border), 0 12px 32px -12px oklch(0 0 0 / 0.22);
+  --ease-ui: cubic-bezier(0.2, 0, 0, 1);
 }
 .dark {
-  --ring: #e796f3; --primary-text: #e796f3;
-  --background: oklch(0.185 0.008 60);
-  --foreground: oklch(0.96 0.006 80);
-  --card: oklch(0.225 0.009 60);
-  --popover: oklch(0.245 0.01 60);
-  --secondary: oklch(0.27 0.01 60);
-  --muted: oklch(0.27 0.01 60);
-  --muted-foreground: oklch(0.72 0.012 70);
-  --accent: oklch(1 0 0 / 0.07);
-  --border: oklch(1 0 0 / 0.08);
-  --input: oklch(1 0 0 / 0.1);
-  --sidebar: oklch(0.16 0.007 60);
-  --sidebar-foreground: oklch(0.8 0.01 70);
-  --tile-shadow: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 20px -10px oklch(0 0 0 / 0.55);
-  --tile-shadow-hover: 0 2px 4px oklch(0 0 0 / 0.35), 0 14px 32px -12px oklch(0 0 0 / 0.7);
+  --ring: #d3a9b1; --primary-text: #d3a9b1;
+  --soft-text: #e6ccd1;
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.185 0 0);
+  --popover: oklch(0.205 0 0);
+  --sidebar: oklch(0.13 0 0);
+  --muted: oklch(0.205 0 0);
+  --pop-shadow: 0 0 0 1px var(--line-strong), 0 16px 40px -12px oklch(0 0 0 / 0.7);
 }
 
-/* Larger type scale: body text is 15px, small text 13px. */
 @theme {
+  --font-sans: "Geist Variable", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-heading: "Geist Variable", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
   --text-xs: 0.8125rem;
-  --text-xs--line-height: 1.25rem;
+  --text-xs--line-height: 1.125rem;
   --text-sm: 0.9375rem;
-  --text-sm--line-height: 1.5rem;
-  --text-base: 1.0625rem;
-  --text-base--line-height: 1.6rem;
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
   --text-lg: 1.25rem;
   --text-lg--line-height: 1.75rem;
+  --color-row-hover: var(--row-hover);
+  --color-row-active: var(--row-active);
+  --color-row-press: var(--row-press);
+  --color-line-strong: var(--line-strong);
+  --color-text-secondary: var(--text-secondary);
 }
 
-/* A raised tile on the tray. The transparent border keeps an edge in forced-colors mode, where shadows vanish. */
+/* A flat surface: card color and a hairline. The border also keeps its edge in forced-colors mode. */
 @utility tile {
-  background: var(--card);
-  border: 1px solid transparent;
-  box-shadow: var(--tile-shadow);
+  background-color: var(--card);
+  border: 1px solid var(--border);
 }
 
-/* Pill controls and filled fields, applied to the shared shadcn parts without editing their files. */
-[data-slot="button"], [data-slot="input"], [data-slot="select-trigger"] { border-radius: 9999px; }
-[data-slot="input"], [data-slot="select-trigger"] {
-  height: 2.5rem;
-  padding-inline: 1rem;
-  font-size: var(--text-sm);
-  background: var(--muted);
-  border-color: transparent;
-  box-shadow: inset 0 1px 2px oklch(0.3 0.03 60 / 0.08);
+/* Fades whichever edge still has content to scroll to. Nothing fades when the list fits. */
+@property --fade-top { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --fade-bottom { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@keyframes scroll-fade {
+  0% { --fade-top: 0px; --fade-bottom: 24px; }
+  6%, 94% { --fade-top: 24px; --fade-bottom: 24px; }
+  100% { --fade-top: 24px; --fade-bottom: 0px; }
 }
-.dark [data-slot="input"], .dark [data-slot="select-trigger"] { box-shadow: inset 0 1px 2px oklch(0 0 0 / 0.35); }
+@utility scroll-fade {
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent);
+  animation: scroll-fade linear both;
+  animation-timeline: scroll(self);
+}
+
+@layer base {
+  body { font-weight: 400; font-feature-settings: "tnum"; }
+  h1, h2, h3 { text-wrap: balance; }
+  p, li { text-wrap: pretty; }
+  ::selection { background: color-mix(in oklab, var(--primary) 26%, transparent); }
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent; }
+  /* Tailwind's preflight gives buttons the arrow cursor; every clickable thing here gets the hand. */
+  button, [role="button"], [role="menuitem"], [role="menuitemradio"], [role="option"], a[href], summary,
+  label:has(> input[type="checkbox"]), input[type="checkbox"], [data-slot="select-trigger"] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  :disabled, [aria-disabled="true"], [data-disabled] { cursor: not-allowed; }
+  [aria-busy="true"] { cursor: progress; }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+}
+
+/* Buttons: flat, 8px corners, 120ms; a press shrinks to 0.98 in 60ms. */
+:is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"]) {
+  border-radius: calc(var(--radius) - 2px);
+  font-weight: 500;
+  transition-property: color, background-color, border-color, box-shadow, scale, filter, opacity;
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease-ui);
+}
+:is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"]):active:not(:disabled) { scale: 0.98; transition-duration: 60ms; }
+:is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"])[data-size="default"] { height: 2.25rem; padding-inline: 0.875rem; }
+:is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"])[data-size="sm"] { height: 2.25rem; padding-inline: 0.875rem; }
+:is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"])[data-size="icon"] { width: 2.25rem; height: 2.25rem; }
+:is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"])[data-size="icon-sm"] { width: 2rem; height: 2rem; }
+:is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"]):is([data-variant="outline"], [data-variant="secondary"]) {
+  border: 1px solid var(--soft-line);
+  background: var(--soft);
+  box-shadow: none;
+  color: var(--soft-text);
+}
+@media (hover: hover) {
+  :is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"]):is([data-variant="outline"], [data-variant="secondary"]):hover:not(:disabled) {
+    background-color: var(--soft-hover);
+  }
+  [data-slot="button"][data-variant="ghost"]:hover:not(:disabled) { background-color: var(--row-hover); }
+  :is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"])[data-variant="default"]:hover:not(:disabled) { background-color: var(--primary); filter: brightness(1.1); }
+}
+:is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"]):is([data-variant="outline"], [data-variant="secondary"]):active:not(:disabled) {
+  background-color: var(--soft-press);
+}
+[data-slot="button"][data-variant="ghost"]:active:not(:disabled) { background-color: var(--row-press); }
+:is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"])[data-variant="default"]:active:not(:disabled) {
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 88%, black), inset 0 1px 2px oklch(0 0 0 / 0.42);
+}
+:is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"]):disabled { box-shadow: none; }
+
+/* Fields: a hairline box; focus swaps the border to the accent and adds a faint 3px halo. */
+[data-slot="input"], [data-slot="select-trigger"] {
+  height: 2.25rem;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid var(--line-strong);
+  padding-inline: 0.75rem;
+  font-size: var(--text-sm);
+  background-color: var(--card);
+  box-shadow: none;
+  transition: border-color 120ms var(--ease-ui), box-shadow 120ms var(--ease-ui);
+}
+[data-slot="input"]:focus-visible, [data-slot="select-trigger"]:focus-visible, [data-slot="select-trigger"][data-state="open"] {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+/* Menus and dialogs: a hairline and one soft shadow; inner corners are the outer corner minus the padding. */
+[data-slot="dropdown-menu-content"], [data-slot="select-content"] {
+  border-color: transparent;
+  border-radius: 0.75rem;
+  padding: 0.25rem;
+  box-shadow: var(--pop-shadow);
+}
+[data-slot="dropdown-menu-item"], [data-slot="select-item"] {
+  min-height: 2rem;
+  border-radius: 0.5rem;
+  font-size: var(--text-sm);
+  transition: background-color 120ms var(--ease-ui);
+}
+[data-slot="alert-dialog-content"] { border-color: transparent; border-radius: 1rem; box-shadow: var(--pop-shadow); padding: 1.5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-fade { animation-duration: auto !important; }
+}
 
 @keyframes indeterminate { from { left: -33%; } to { left: 100%; } }

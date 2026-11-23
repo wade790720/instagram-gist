@@ -168,3 +168,18 @@ assert.deepEqual(plan.defs, { 心靈: '情緒、療癒', 醫療: '看病與治�
 assert.match(C.tidyPrompt(topicsPool, 'zh'), /\n心靈 \(8 items\): @u: text/);
 assert.doesNotMatch(C.tidyPrompt(topicsPool, 'zh'), /\n其他 \(/);
 });
+
+test("digestLines splits bullets, nesting and a short lead label, and drops blank lines", () => {
+  const lines = C.digestLines('• 刻滑（Carving）：保持放鬆感 [4][13]\n\n• 單板走刃與刻滑技巧調整：\n   ◦ 入彎時重心前移 [2]\nplain closing line');
+  assert.deepEqual(lines, [
+    { depth: 0, bullet: true, lead: '刻滑（Carving）', body: '保持放鬆感 [4][13]' },
+    { depth: 0, bullet: true, lead: '單板走刃與刻滑技巧調整', body: '' },
+    { depth: 1, bullet: true, body: '入彎時重心前移 [2]' },
+    { depth: 0, bullet: false, body: 'plain closing line' },
+  ]);
+});
+
+test("digestLines leaves a long sentence with a colon as body, not a lead", () => {
+  const [l] = C.digestLines('• 這是一個很長很長的句子，裡面剛好也有冒號出現在後面：然後繼續 [1]');
+  assert.equal(l.lead, undefined);
+});

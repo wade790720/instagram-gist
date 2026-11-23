@@ -20,7 +20,7 @@ function sampleCover(i: number, h: number) {
   return new Response(svg, { headers: { 'Content-Type': 'image/svg+xml' } });
 }
 const summaries = {
-  行銷商業: [{ id: 'd1', text: '• 銷售公式：痛點情境 + 解決方案，先描述讀者的處境再給方法 [1][3]\n• 開場 3 秒用反差鉤子留住陌生人 [2]\n• 留言關鍵字換資源，提高互動與觸及 [4]', sourceIds: ['s1', 's5', 's9', 's13'], notes: ['收斂成固定公式'], at: Date.now() }],
+  行銷商業: [{ id: 'd1', text: '• 銷售公式：痛點情境 + 解決方案，先描述讀者的處境，再給可以照做的方法，最後用一個真實案例收尾 [1][3]\n\n• 開場鉤子：\n   ◦ 前 3 秒用反差句留住陌生人，例如「我花了三年才發現」[2]\n   ◦ 字卡第一張只放一句話，字級要大到手機上不用放大 [3]\n\n• 留言關鍵字換資源，提高互動與觸及；回覆時用私訊送出，避免被當成垃圾留言 [4]', sourceIds: ['s1', 's5', 's9', 's13'], notes: ['收斂成固定公式'], at: Date.now() }],
 };
 const avatars = Object.fromEntries([...names].map((n, i) => [n, `data:image/svg+xml,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="oklch(0.72 0.12 ${(i * 47) % 360})"/><text x="20" y="26" font-size="16" text-anchor="middle" fill="white" font-family="sans-serif">${n[0].toUpperCase()}</text></svg>`)}`]));

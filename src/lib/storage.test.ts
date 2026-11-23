@@ -12,7 +12,7 @@ test('save keeps the error-report choice made after load', async () => {
   assert.equal((await chrome.storage.local.get(null)).errorReporting, 'off');
 });
 
-test('onboarding stays done after "Re-sort everything" leaves nothing sorted', async () => {
+test('onboarding stays done after "Re-sort" leaves nothing sorted', async () => {
   const { load } = await import('./actions');
   const { allItems, db } = await import('./store');
   const { onboarded } = await import('@/components/Welcome');

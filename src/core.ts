@@ -280,6 +280,19 @@ export function normalizeSummaries(all: Record<string, Digest[] | Omit<Digest, '
   return all as Summaries;
 }
 
+/** One line of a digest, parsed for layout. `lead` is a short label before a colon ("刻滑：…"). */
+export interface DigestLine { depth: 0 | 1; bullet: boolean; lead?: string; body: string }
+
+export function digestLines(text: string): DigestLine[] {
+  return text.split('\n').filter(l => l.trim()).map(line => {
+    const m = line.match(/^(\s*)([•◦▪‣*-])\s+/);
+    const depth = m && (m[1].length >= 2 || '◦▪‣'.includes(m[2])) ? 1 : 0;
+    const rest = m ? line.slice(m[0].length) : line.trim();
+    const lead = rest.match(/^([^：:[\]]{2,20})[：:]\s*/);
+    return { depth, bullet: !!m, ...(lead && { lead: lead[1] }), body: lead ? rest.slice(lead[0].length) : rest };
+  });
+}
+
 export function orderSources(prevIds: string[], posts: Post[]): Post[] {
   const byId = new Map(posts.map(p => [p.id, p]));
   const had = new Set(prevIds);
