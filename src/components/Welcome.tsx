@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Check, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { saveSettings, sortRest, sync } from '@/lib/actions';
-import { checkKey } from '@/lib/gemini';
+import { keyProblem } from '@/lib/gemini';
 import { t } from '@/lib/i18n';
 import { allItems, db, ui } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -41,7 +41,7 @@ export function Welcome() {
     if (!k) return setErr(t('keyEmpty'));
     setChecking(true);
     setErr('');
-    const problem = await checkKey(k);
+    const problem = await keyProblem(k);
     setChecking(false);
     if (problem) return setErr(problem);
     await saveSettings({ ...db.settings, apiKey: k });
