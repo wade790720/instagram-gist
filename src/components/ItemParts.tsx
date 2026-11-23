@@ -17,8 +17,8 @@ export function Avatar({ name, className }: { name: string; className?: string }
 
 // modal={false}: a modal menu that opens a dialog ("New topic…") can leave the page unclickable.
 export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: string[]; overlay?: boolean; className?: string }) {
-  const [mounted, setMounted] = useState(false);
-  const [open, setOpen] = useState(false);
+  // 'cold' is a plain button: mounting the Radix menu up front made 600 cards render 6x slower (727 vs 117 ms, dev build).
+  const [menu, setMenu] = useState<'cold' | 'open' | 'closed'>('cold');
   const cls = cn(
     'group/p flex shrink-0 items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring',
     overlay
@@ -32,14 +32,12 @@ export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: st
     {!overlay && <ChevronDown className="size-3.5 opacity-0 transition-opacity group-hover:opacity-50 group-data-[state=open]/p:opacity-50" />}
   </>;
 
-  if (!mounted) return (
-    <button type="button" className={cls} aria-label={t('moveTo')} aria-haspopup="menu" onClick={() => { setMounted(true); setOpen(true); }}>{label}</button>
-  );
+  // Once mounted, Radix toggles on pointer down; an onClick of our own would reopen the menu it just closed.
+  const trigger = <button type="button" className={cls} aria-label={t('moveTo')} aria-haspopup="menu" onClick={menu === 'cold' ? () => setMenu('open') : undefined}>{label}</button>;
+  if (menu === 'cold') return trigger;
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
-      <DropdownMenuTrigger asChild>
-        <button type="button" className={cls} aria-label={t('moveTo')}>{label}</button>
-      </DropdownMenuTrigger>
+    <DropdownMenu open={menu === 'open'} onOpenChange={o => setMenu(o ? 'open' : 'closed')} modal={false}>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-80 w-48 overflow-y-auto overscroll-contain">
         {cats.map(c => (
           <DropdownMenuItem key={c} onSelect={() => moveItem(x, c)}>
