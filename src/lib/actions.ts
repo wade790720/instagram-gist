@@ -1,11 +1,11 @@
 import * as Core from '@/core';
-import type { Digest, Item, Post, User } from '@/core';
+import type { Digest, Item, Lang, Post, User } from '@/core';
 import { record } from './error-log';
 import { gemini } from './gemini';
 import { t, when } from './i18n';
 import { fromIg } from './ig';
 import { clearThumbs, coverJobs, pool } from './thumbs';
-import { allItems, ask, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui, uiLang } from './store';
+import { allItems, ask, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui, uiLang, type DB, type Settings } from './store';
 
 const DAY = 864e5;
 const FOLLOWS_PER_CALL = 400;
@@ -244,18 +244,36 @@ export async function clearAll() {
   emit();
 }
 
-export async function load() {
-  const { avatars: stored, ...rest } = (await chrome.storage.local.get(null)) as Partial<typeof db> & { avatars?: Record<string, string> };
-  Object.assign(avatars, stored);
-  for (const k of DB_KEYS) if (k in rest) Object.assign(db, { [k]: rest[k] });
-  if (db.settings?.model && !db.settings.summaryModel && db.settings.model === 'gemini-3.8-flash') db.settings.model = DEFAULTS.model;
-  db.settings = { ...DEFAULTS, ...db.settings, lang: db.settings?.lang || uiLang() };
-  db.onboarded ||= allItems().some(x => x.cat);
-  db.summaries = Core.normalizeSummaries(db.summaries);
-  db.following = Core.uniqById(db.following);
-  db.saved = Core.uniqById(db.saved);
+/** Stored data in any shape an older version wrote. Only upgrade() reads it. */
+type Stored = Partial<Omit<DB, 'summaries'>> & { summaries?: Parameters<typeof Core.normalizeSummaries>[0] };
+
+/** Brings any stored shape up to DB. Pure, and load() runs it on every page open, so each step must be idempotent. */
+export function upgrade(s: Stored, lang: Lang): DB {
+  const old = s.settings;
+  // Settings saved before summaryModel existed sorted with 3.8-flash: sorting moves to lite once.
+  const model = old?.model === 'gemini-3.8-flash' && !old.summaryModel ? DEFAULTS.model : old?.model;
+  const settings: Settings = { ...DEFAULTS, ...old, ...(model && { model }), lang: old?.lang || lang };
   // gemini-2.x returns 404 for keys created after 2026-09-18; move saved settings off it.
-  if (/^gemini-2\./.test(db.settings.model)) db.settings.model = DEFAULTS.model;
-  if (db.following.length && (db.following[0].private === undefined || db.following[0].pic === undefined)) db.lastSync.following = 0;
+  if (/^gemini-2./.test(settings.model)) settings.model = DEFAULTS.model;
+  const following = Core.uniqById(s.following ?? []);
+  const saved = Core.uniqById(s.saved ?? []);
+  const lastSync = { ...s.lastSync };
+  // Follows stored before the friend rule (private) or avatars (pic) existed: refetch on the next sync.
+  if (following.length && (following[0].private === undefined || following[0].pic === undefined)) lastSync.following = 0;
+  return {
+    ...s, settings, following, saved, lastSync,
+    summaries: Core.normalizeSummaries(s.summaries),
+    defs: s.defs ?? {},
+    onboarded: s.onboarded || [...following, ...saved].some(x => x.cat),
+  };
+}
+
+export async function load() {
+  const { avatars: stored, ...rest } = (await chrome.storage.local.get(null)) as Stored & { avatars?: Record<string, string> };
+  Object.assign(avatars, stored);
+  const own: Stored = {};
+  for (const k of DB_KEYS) if (k in rest) Object.assign(own, { [k]: rest[k] });
+  Object.assign(db, upgrade(own, uiLang()));
   ui.status = t('lastSync', when(db.lastSync.saved), when(db.lastSync.following));
 }
+

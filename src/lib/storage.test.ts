@@ -79,3 +79,11 @@ test('load() upgrades every legacy shape, and loading again changes nothing', as
   await load();
   assert.deepEqual(db, once);
 });
+
+test('upgrade() run twice equals run once, for empty storage and every legacy shape', async () => {
+  const { upgrade } = await import('./actions');
+  for (const stored of [{}, legacy]) {
+    const once = upgrade(structuredClone(stored), 'en');
+    assert.deepEqual(upgrade(structuredClone(once), 'en'), once);
+  }
+});
