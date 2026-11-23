@@ -45,3 +45,28 @@ test('"Delete all data" keeps the error-report choice and the settings', async (
   assert.deepEqual(stored.saved, []);
   assert.equal(stored.settings.apiKey, 'dev');
 });
+
+// Every stored shape an older version wrote. load() runs on every page open, so it must be idempotent.
+const legacy = {
+  settings: { apiKey: 'k', model: 'gemini-3.8-flash' },
+  summaries: { 行銷: { text: 'a', sourceIds: ['p1'] } },
+  following: [{ id: 'u1', username: 'a', name: 'A' }, { id: 'u1', username: 'a', name: 'A' }],
+  saved: [{ id: 'p1', code: 'c', user: 'a', caption: '', alt: '', type: 'post', takenAt: 0, cat: '行銷' }],
+  lastSync: { saved: 1, following: 2 },
+};
+
+test('load() upgrades every legacy shape, and loading again changes nothing', async () => {
+  const { load } = await import('./actions');
+  const { db, save } = await import('./store');
+  await chrome.storage.local.set(structuredClone(legacy));
+  await load();
+  assert.equal(db.settings.model, 'gemini-3.5-flash-lite');
+  assert.equal(db.settings.summaryModel, 'gemini-3.8-flash');
+  assert.deepEqual(db.summaries, { 行銷: [{ id: 'd0', text: 'a', sourceIds: ['p1'] }] });
+  assert.equal(db.following.length, 1);
+  assert.equal(db.lastSync.following, 0);
+  const once = structuredClone(db);
+  await save();
+  await load();
+  assert.deepEqual(db, once);
+});
