@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Check, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { ArrowUpRightFromSquare, ArrowsRotateRight, Check, Sparkles } from '@gravity-ui/icons';
 import { saveSettings, sortRest, sync } from '@/lib/actions';
 import { keyProblem } from '@/lib/gemini';
 import { t } from '@/lib/i18n';
@@ -61,7 +61,7 @@ export function Welcome() {
               <li>
                 {t('s1Open')}{' '}
                 <a className="inline-flex items-center gap-1 text-foreground underline underline-offset-4" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
-                  aistudio.google.com/apikey <ExternalLink className="size-3" />
+                  aistudio.google.com/apikey <ArrowUpRightFromSquare className="size-3" />
                 </a>
               </li>
               <li>{t('s1Create')}</li>
@@ -71,7 +71,7 @@ export function Welcome() {
               <Input type="password" autoComplete="off" placeholder="AIza…" aria-label={t('apiKey')} value={key}
                 onChange={e => setKey(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') saveKey(); }} />
               <Button onClick={saveKey} disabled={checking}>
-                {checking ? <><Loader2 className="animate-spin" />{t('s1Checking')}</> : t('s1Save')}
+                {checking ? <><ArrowsRotateRight className="animate-spin" />{t('s1Checking')}</> : t('s1Save')}
               </Button>
             </div>
             {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
@@ -86,10 +86,10 @@ export function Welcome() {
             <p className="text-xs text-muted-foreground">{t('s2Time')}</p>
             <div className="flex flex-wrap gap-2">
               <Button onClick={sync} disabled={ui.busy}>
-                {ui.busy ? <Loader2 className="animate-spin" /> : <RefreshCw />}{t('sync')}
+                <ArrowsRotateRight className={cn(ui.busy && 'animate-spin')} />{t('sync')}
               </Button>
-              <Button variant="outline" asChild>
-                <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">{t('s2Open')}<ExternalLink /></a>
+              <Button variant="outline" asChild data-icon="end">
+                <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">{t('s2Open')}<ArrowUpRightFromSquare /></a>
               </Button>
             </div>
             {ui.err && ui.status && <p role="alert" className="text-sm text-destructive">{ui.status}</p>}

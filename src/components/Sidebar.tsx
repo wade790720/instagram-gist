@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Bookmark, MoreHorizontal, Pencil, RefreshCw, Settings, Sparkles, Trash2, Users } from 'lucide-react';
+import { ArrowsRotateRight, Bookmark, Ellipsis, Gear, Pencil, Persons, Sparkles, TrashBin } from '@gravity-ui/icons';
 import * as Core from '@/core';
 import { deleteTopic, renameTopic, sync } from '@/lib/actions';
 import { t } from '@/lib/i18n';
@@ -17,11 +17,11 @@ const off = 'text-text-secondary hover:bg-row-hover hover:text-foreground';
 export function Sidebar() {
   const { tab, cat } = ui.view;
   const digests = Object.values(db.summaries).reduce((n, l) => n + l.length, 0);
-  const nav: [Tab, typeof Users, string, number?][] = [
-    ['following', Users, t('tabFollowing'), db.following.length],
+  const nav: [Tab, typeof Persons, string, number?][] = [
+    ['following', Persons, t('tabFollowing'), db.following.length],
     ['saved', Bookmark, t('tabSaved'), db.saved.length],
     ['digests', Sparkles, t('tabBookmarks'), digests],
-    ['settings', Settings, t('tabSettings')],
+    ['settings', Gear, t('tabSettings')],
   ];
   const list = tab === 'following' || tab === 'saved' ? db[tab] : null;
 
@@ -33,7 +33,7 @@ export function Sidebar() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon-sm" onClick={sync} disabled={ui.busy} aria-label={t('sync')}>
-              <RefreshCw className={cn('size-4', ui.busy && 'animate-spin')} />
+              <ArrowsRotateRight className={cn('size-4', ui.busy && 'animate-spin')} />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">{t('sync')}</TooltipContent>
@@ -43,7 +43,7 @@ export function Sidebar() {
         {nav.map(([id, Icon, label, n]) => (
           <button key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => setView({ tab: id, cat: '' })}
             className={cn(row, tab === id ? on : off)}>
-            <Icon className="size-4" strokeWidth={1.75} />
+            <Icon className="size-4" />
             <span className="flex-1">{label}</span>
             {n !== undefined && <span className="text-xs tabular-nums text-muted-foreground">{n}</span>}
           </button>
@@ -92,12 +92,12 @@ function TopicRow({ cat, n, active }: { cat: string; n: number; active: boolean 
                 'transition-[opacity,background-color,scale] duration-150 ease-out hover:bg-foreground/10 hover:text-foreground active:scale-90 focus-visible:opacity-100 disabled:hidden',
                 shown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
               )}>
-              <MoreHorizontal className="size-4" />
+              <Ellipsis className="size-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-40" onCloseAutoFocus={e => { if (skipFocusReturn.current) { e.preventDefault(); skipFocusReturn.current = false; } }}>
             <DropdownMenuItem onSelect={() => { skipFocusReturn.current = true; setEditing(true); }}><Pencil />{t('editTopic')}</DropdownMenuItem>
-            <DropdownMenuItem variant="destructive" onSelect={() => deleteTopic(cat)}><Trash2 />{t('deleteCat')}</DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onSelect={() => deleteTopic(cat)}><TrashBin />{t('deleteCat')}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )}
@@ -105,7 +105,7 @@ function TopicRow({ cat, n, active }: { cat: string; n: number; active: boolean 
   );
 }
 
-function TopicInput({ cat, done }: { cat: string; done: () => void }) {
+export function TopicInput({ cat, done }: { cat: string; done: () => void }) {
   const before = useRef(ui.status);
   const finished = useRef(false);
   const others = Core.groupCounts(allItems()).map(([c]) => c).filter(c => c !== cat);

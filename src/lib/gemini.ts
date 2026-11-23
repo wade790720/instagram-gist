@@ -50,3 +50,15 @@ export async function keyProblem(key: string): Promise<string | null> {
   if (r.status === 429) return t('keyBusy');
   return t('keyOther', r.status);
 }
+
+// Free to call, like keyProblem. An empty list (offline, bad key) leaves only the saved choices.
+export async function listModels(key: string): Promise<string[]> {
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', { headers: { 'x-goog-api-key': key } });
+    if (!r.ok) return [];
+    const { models = [] } = await r.json() as { models?: { name: string; supportedGenerationMethods?: string[] }[] };
+    return models.filter(m => m.supportedGenerationMethods?.includes('generateContent')).map(m => m.name);
+  } catch {
+    return [];
+  }
+}

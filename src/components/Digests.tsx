@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, RotateCcw, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowRotateLeft, ChevronRight, Sparkles, TrashBin } from '@gravity-ui/icons';
 import * as Core from '@/core';
 import type { Digest } from '@/core';
 import { branchDigest, createDigest, deleteDigest, reviseDigest, undoDigest } from '@/lib/actions';
@@ -81,8 +81,8 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
               ? <Button size="sm" variant="secondary" disabled={ui.busy} onClick={() => reviseDigest(cat, i)}><Sparkles />{t('updateSummary', fresh)}</Button>
               : <span className="px-1 text-xs text-muted-foreground">{t('upToDate')}</span>}
             <span className="flex-1" />
-            {d.prev && <Button size="sm" variant="ghost" disabled={ui.busy} onClick={() => undoDigest(cat, i)}><RotateCcw />{t('undo')}</Button>}
-            <Button size="sm" variant="ghost" disabled={ui.busy} onClick={() => deleteDigest(cat, i)} className="text-destructive hover:text-destructive"><Trash2 />{t('deleteDigest')}</Button>
+            {d.prev && <Button size="sm" variant="ghost" disabled={ui.busy} onClick={() => undoDigest(cat, i)}><ArrowRotateLeft />{t('undo')}</Button>}
+            <Button size="sm" variant="ghost" disabled={ui.busy} onClick={() => deleteDigest(cat, i)} className="text-destructive hover:text-destructive"><TrashBin />{t('deleteDigest')}</Button>
           </div>
         </div>
       </CollapsibleContent>

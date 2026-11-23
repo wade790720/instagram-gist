@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, ArrowUp, ChevronRight, LayoutGrid, List, Search, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowUp } from '@gravity-ui/icons';
 import { groupCounts } from '@/core';
-import { applyTidy, sortRest } from '@/lib/actions';
+import { applyTidy } from '@/lib/actions';
 import { t } from '@/lib/i18n';
-import { allItems, db, emit, save, setView, ui, useStore } from '@/lib/store';
+import { allItems, emit, ui, useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
@@ -12,11 +12,9 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { DigestsView } from './components/Digests';
 import { ListView } from './components/ListView';
 import { SettingsView } from './components/SettingsView';
-import { Sidebar } from './components/Sidebar';
+import { ContextBar, TopBar } from './components/TopBar';
 import { TopicDot } from './components/TopicDot';
 import { onboarded, Welcome } from './components/Welcome';
-
-const TAB_LABEL = { following: 'tabFollowing', saved: 'tabSaved', digests: 'tabBookmarks', settings: 'tabSettings' } as const;
 
 export function App() {
   useStore();
@@ -27,10 +25,10 @@ export function App() {
 
   return (
     <TooltipProvider delayDuration={400}>
-      <div className="flex h-screen overflow-hidden max-md:flex-col">
-        <Sidebar />
+      <div className="flex h-screen flex-col overflow-hidden">
+        <TopBar />
         <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          <Header />
+          {onboarded() && <ContextBar key={`${ui.view.tab}|${ui.view.cat}`} />}
           <div ref={scroller} data-scroller onScroll={e => setTop(e.currentTarget.scrollTop > e.currentTarget.clientHeight)}
             className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
             {tab === 'following' || tab === 'saved'
@@ -49,51 +47,6 @@ export function App() {
       <AskDialog />
       <TidyDialog />
     </TooltipProvider>
-  );
-}
-
-function Header() {
-  const { tab, cat, q } = ui.view;
-  const list = tab === 'following' || tab === 'saved' ? db[tab] : null;
-  const untagged = list?.filter(x => !x.cat).length ?? 0;
-  const count = list && (cat ? list.filter(x => x.cat === cat).length : list.length);
-
-  return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b px-8">
-      <nav className="flex min-w-0 flex-auto shrink-0 items-center gap-2 text-base font-semibold">
-        <button className={cn('shrink-0 rounded-lg transition-colors duration-150', cat ? 'text-muted-foreground hover:text-foreground' : 'text-foreground')} onClick={() => setView({ cat: '' })}>{t(TAB_LABEL[tab])}</button>
-        {cat && <>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-          <TopicDot cat={cat} className="size-2.5" />
-          <span className="truncate">{cat}</span>
-        </>}
-        {count !== null && <span className="ml-0.5 text-xs font-normal text-muted-foreground tabular-nums">{count}</span>}
-      </nav>
-      {untagged > 0 && onboarded() && (
-        <Button variant="outline" disabled={ui.busy} onClick={sortRest}><Sparkles />{t('sortRest', untagged)}</Button>
-      )}
-      {tab === 'following' && <ViewToggle />}
-      {list && (
-        <div className="relative w-72 min-w-0 shrink-[4]">
-          <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input type="search" value={q} onChange={e => setView({ q: e.target.value })} placeholder={t('search')} aria-label={t('search')} className="!pl-9" />
-        </div>
-      )}
-    </header>
-  );
-}
-
-function ViewToggle() {
-  const v = db.settings.followView;
-  const set = (followView: 'grid' | 'list') => { db.settings.followView = followView; save(); emit(); };
-  const options = [['grid', LayoutGrid, t('viewGrid')], ['list', List, t('viewList')]] as const;
-  return (
-    <div role="group" aria-label={t('viewAs')} className="flex h-9 shrink-0 items-center gap-0.5 rounded-lg border border-line-strong p-0.5">
-      {options.map(([id, Icon, label]) => (
-        <Button key={id} variant="ghost" size="icon-sm" aria-pressed={v === id} aria-label={label} title={label} onClick={() => set(id)}
-          className={cn('!size-[28px] rounded-md text-muted-foreground hover:text-foreground', v === id && 'bg-row-active text-foreground hover:!bg-row-active')}><Icon className="size-4" /></Button>
-      ))}
-    </div>
   );
 }
 

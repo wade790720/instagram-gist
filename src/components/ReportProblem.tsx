@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LifeBuoy } from 'lucide-react';
+import { LifeRing } from '@gravity-ui/icons';
 import { Button } from '@/components/ui/button';
 import { buildReport, getReporting, setReporting, SUPPORT_EMAIL } from '@/lib/error-log';
 
@@ -30,7 +30,7 @@ export function ReportProblem({ size = 'default', lang }: { size?: 'default' | '
   return (
     <>
       <Button type="button" variant="outline" size={size} onClick={report} aria-live="polite">
-        <LifeBuoy />{done ? text.done : text.label}
+        <LifeRing />{done ? text.done : text.label}
       </Button>
       {auto !== null && (
         <label className="flex items-center gap-2 text-sm text-muted-foreground">

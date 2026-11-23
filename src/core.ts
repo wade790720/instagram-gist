@@ -308,3 +308,20 @@ export const matches = (x: Item, q: string) => {
   const u = x as Partial<User & Post>;
   return [u.username, u.name, u.user, u.caption, u.alt, u.cat].join(' ').toLowerCase().includes(q.toLowerCase());
 };
+
+export type ModelTier = 'quality' | 'balanced' | 'quota';
+const TIER_ORDER: ModelTier[] = ['quality', 'balanced', 'quota'];
+const tierOf = (name: string): ModelTier | undefined =>
+  /-pro\b/.test(name) ? 'quality' : /-flash-lite\b/.test(name) ? 'quota' : /-flash\b/.test(name) ? 'balanced' : undefined;
+const versionOf = (name: string) => Number(/^gemini-(\d+(?:\.\d+)?)/.exec(name)?.[1] ?? 0);
+
+/** Text models from ListModels, newest first, pro then flash then lite. Previews, TTS, image and other
+ *  special-purpose variants are left out. Names in `keep` (the saved choices) are always listed. */
+export function modelOptions(names: string[], keep: string[]): { name: string; tier?: ModelTier }[] {
+  const ok = names.map(n => n.replace(/^models\//, '')).filter(n => /^gemini-(\d[\d.]*-)?(pro|flash|flash-lite)(-latest)?$/.test(n));
+  return [...new Set([...ok, ...keep.filter(Boolean)])]
+    .map(name => ({ name, tier: tierOf(name) }))
+    .sort((a, b) => versionOf(b.name) - versionOf(a.name)
+      || (a.tier ? TIER_ORDER.indexOf(a.tier) : 9) - (b.tier ? TIER_ORDER.indexOf(b.tier) : 9)
+      || a.name.localeCompare(b.name));
+}

@@ -183,3 +183,17 @@ test("digestLines leaves a long sentence with a colon as body, not a lead", () =
   const [l] = C.digestLines('• 這是一個很長很長的句子，裡面剛好也有冒號出現在後面：然後繼續 [1]');
   assert.equal(l.lead, undefined);
 });
+
+test("modelOptions keeps text models newest first, tags tiers and always lists the saved choice", () => {
+  const got = C.modelOptions(
+    ['models/gemini-3.5-flash-lite', 'models/gemini-3.8-flash', 'models/gemini-3.8-pro', 'models/gemini-3.8-flash-preview-tts',
+      'models/gemini-3.8-flash-image', 'models/text-embedding-004', 'models/gemini-3.8-flash-lite'],
+    ['my-custom-model', 'gemini-3.8-flash']);
+  assert.deepEqual(got, [
+    { name: 'gemini-3.8-pro', tier: 'quality' },
+    { name: 'gemini-3.8-flash', tier: 'balanced' },
+    { name: 'gemini-3.8-flash-lite', tier: 'quota' },
+    { name: 'gemini-3.5-flash-lite', tier: 'quota' },
+    { name: 'my-custom-model', tier: undefined },
+  ]);
+});

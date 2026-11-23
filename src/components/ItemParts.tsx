@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Plus } from 'lucide-react';
+import { Check, ChevronDown, Plus } from '@gravity-ui/icons';
 import type { Item } from '@/core';
 import { moveItem } from '@/lib/actions';
 import { t } from '@/lib/i18n';
@@ -11,7 +11,7 @@ import { TopicDot } from './TopicDot';
 export function Avatar({ name, className }: { name: string; className?: string }) {
   const src = avatars[name];
   return src
-    ? <img src={src} alt="" className={cn('size-7 shrink-0 rounded-full object-cover', className)} />
+    ? <img src={src} alt="" className={cn('size-7 shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10', className)} />
     : <span aria-hidden className={cn('grid size-7 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium text-muted-foreground uppercase', className)}>{name.slice(0, 1)}</span>;
 }
 
@@ -20,16 +20,17 @@ export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: st
   // 'cold' is a plain button: mounting the Radix menu up front made 600 cards render 6x slower (727 vs 117 ms, dev build).
   const [menu, setMenu] = useState<'cold' | 'open' | 'closed'>('cold');
   const cls = cn(
-    'group/p flex shrink-0 items-center gap-1.5 font-medium transition-[background-color,color,scale] duration-[120ms] ease-[var(--ease-ui)] active:scale-[.98]',
+    // One shape everywhere; only the fill changes so the label stays legible on a photo.
+    'group/p flex h-7 max-w-36 shrink-0 items-center gap-1.5 rounded-md ps-2 pe-1.5 text-xs font-medium transition-[background-color,color,scale] duration-[120ms] ease-[var(--ease-ui)] active:scale-[.98]',
     overlay
-      ? 'h-7 max-w-32 rounded-md bg-black/35 px-2 text-xs text-white backdrop-blur-sm hover:bg-black/50 data-[state=open]:bg-black/50'
-      : 'h-8 w-40 rounded-md px-2.5 text-xs text-text-secondary hover:bg-row-hover hover:text-foreground data-[state=open]:bg-row-active data-[state=open]:text-foreground',
+      ? 'bg-black/35 text-white backdrop-blur-sm hover:bg-black/50 data-[state=open]:bg-black/50'
+      : 'bg-row-hover text-text-secondary hover:bg-row-active hover:text-foreground data-[state=open]:bg-row-active data-[state=open]:text-foreground',
     className,
   );
   const label = <>
     <TopicDot cat={x.cat} />
     <span className="min-w-0 flex-1 truncate text-left">{x.cat || t('unsorted')}</span>
-    {!overlay && <ChevronDown className="size-3.5 opacity-0 transition-opacity group-hover:opacity-50 group-data-[state=open]/p:opacity-50" />}
+    <ChevronDown className="size-3.5 shrink-0 opacity-60" />
   </>;
 
   // Once mounted, Radix toggles on pointer down; an onClick of our own would reopen the menu it just closed.

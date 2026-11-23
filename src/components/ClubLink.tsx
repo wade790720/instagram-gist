@@ -1,4 +1,4 @@
-import { ExternalLink, X } from 'lucide-react';
+import { ArrowUpRightFromSquare, Xmark } from '@gravity-ui/icons';
 import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -11,11 +11,11 @@ export function ClubLink({ className, onClose }: { className?: string; onClose?:
   return (
     <div className={cn('flex flex-wrap items-center gap-3 text-sm text-muted-foreground', className)}>
       <span className="min-w-0 flex-1">{t('clubLine')}</span>
-      <Button variant="outline" size="sm" asChild>
-        <a href={CLUB_URL} target="_blank" rel="noreferrer">{t('clubButton')}<ExternalLink /></a>
+      <Button variant="outline" size="sm" asChild data-icon="end">
+        <a href={CLUB_URL} target="_blank" rel="noreferrer">{t('clubButton')}<ArrowUpRightFromSquare /></a>
       </Button>
       {onClose && (
-        <Button variant="ghost" size="icon-sm" aria-label={t('close')} title={t('close')} onClick={onClose}><X /></Button>
+        <Button variant="ghost" size="icon-sm" aria-label={t('close')} title={t('close')} onClick={onClose}><Xmark /></Button>
       )}
     </div>
   );

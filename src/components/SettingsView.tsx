@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Combine, ExternalLink, Sparkles, Trash2 } from 'lucide-react';
-import type { Lang } from '@/core';
+import { useEffect, useState } from 'react';
+import { ArrowUpRightFromSquare, BroomMotion, Sparkles, TrashBin } from '@gravity-ui/icons';
+import { modelOptions, type Lang, type ModelTier } from '@/core';
 import { clearAll, resortAll, saveSettings, tidyTopics } from '@/lib/actions';
 import { t, when } from '@/lib/i18n';
-import { db, ui } from '@/lib/store';
+import { DEFAULTS, db, ui } from '@/lib/store';
+import { listModels } from '@/lib/gemini';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,9 +19,26 @@ export function SettingsView() {
   const set = (k: keyof typeof s) => (e: React.ChangeEvent<HTMLInputElement>) => setS({ ...s, [k]: e.target.value });
   const dirty = FORM_KEYS.some(k => s[k] !== db.settings[k]);
   const save = () => { const done = saveSettings(s); setS({ ...db.settings }); return done; };
+  const [available, setAvailable] = useState<string[]>([]);
+  useEffect(() => { if (db.settings.apiKey) listModels(db.settings.apiKey).then(setAvailable); }, []);
+  const models = modelOptions(available, [s.model, s.summaryModel, DEFAULTS.model, DEFAULTS.summaryModel]);
+  const pick = (k: 'model' | 'summaryModel') => (
+    <Select value={s[k]} onValueChange={v => setS({ ...s, [k]: v })}>
+      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        {models.map(m => (
+          <SelectItem key={m.name} value={m.name}>
+            {m.name}
+            {m.tier && <Pill>{t(TIER_LABEL[m.tier])}</Pill>}
+            {m.name === DEFAULTS[k] && <Pill strong>{t('recommended')}</Pill>}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-8 py-8">
+    <div className="mx-auto flex max-w-2xl flex-col gap-8 px-8 py-8">
       <Panel title={t('sectionAi')} help={t('sectionAiHelp')} footer={<>
         <span className="min-w-0 flex-1 text-xs text-muted-foreground">{dirty ? t('unsaved') : t('allSaved')}</span>
         <Button variant="outline" disabled={!dirty} onClick={() => setS({ ...db.settings })}>{t('cancel')}</Button>
@@ -29,8 +47,8 @@ export function SettingsView() {
         <Row field title={t('apiKey')} help={t('apiKeyHelp')}>
           <Input type="password" value={s.apiKey} onChange={set('apiKey')} placeholder="AIza…" autoComplete="off" />
         </Row>
-        <Row field title={t('model')} help={t('modelHelp')}><Input value={s.model} onChange={set('model')} /></Row>
-        <Row field title={t('summaryModel')} help={t('summaryModelHelp')}><Input value={s.summaryModel} onChange={set('summaryModel')} /></Row>
+        <Row field title={t('model')} help={t('modelHelp')}>{pick('model')}</Row>
+        <Row field title={t('summaryModel')} help={t('summaryModelHelp')}>{pick('summaryModel')}</Row>
         <Row field title={t('aiLang')} help={t('aiLangHelp')}>
           <Select value={s.lang} onValueChange={v => setS({ ...s, lang: v as Lang })}>
             <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -44,7 +62,7 @@ export function SettingsView() {
 
       <Panel title={t('sectionData')} help={t('lastSync', when(db.lastSync.saved), when(db.lastSync.following))}>
         <Row title={t('tidy')} help={t('tidyHelp')}>
-          <Button variant="outline" disabled={ui.busy || !db.settings.apiKey} onClick={tidyTopics}><Combine />{t('tidy')}</Button>
+          <Button variant="outline" disabled={ui.busy || !db.settings.apiKey} onClick={tidyTopics}><BroomMotion />{t('tidy')}</Button>
         </Row>
         <Row title={t('recategorize')} help={t('recategorizeHelp')}>
           <Button variant="outline" disabled={ui.busy} onClick={resortAll}><Sparkles />{t('recategorize')}</Button>
@@ -56,28 +74,37 @@ export function SettingsView() {
           <div className="flex flex-row-reverse flex-wrap items-center gap-x-4 gap-y-2"><ReportProblem /></div>
         </Row>
         <Row title={t('clubTitle')} help={t('clubLine')}>
-          <Button variant="outline" asChild><a href={CLUB_URL} target="_blank" rel="noreferrer">{t('clubButton')}<ExternalLink /></a></Button>
+          <Button variant="outline" asChild data-icon="end"><a href={CLUB_URL} target="_blank" rel="noreferrer">{t('clubButton')}<ArrowUpRightFromSquare /></a></Button>
         </Row>
       </Panel>
 
       <Panel title={t('sectionDanger')} help={t('sectionDangerHelp')}>
         <Row title={t('clearData')} help={t('clearDataHelp')}>
-          <Button variant="outline" disabled={ui.busy} onClick={clearAll} className="border-destructive/30! bg-transparent! text-destructive! hover:bg-destructive/10!"><Trash2 />{t('clearData')}</Button>
+          <Button variant="outline" disabled={ui.busy} onClick={clearAll} className="border-destructive/30! bg-transparent! text-destructive! hover:bg-destructive/10!"><TrashBin />{t('clearData')}</Button>
         </Row>
       </Panel>
     </div>
   );
 }
 
+const TIER_LABEL: Record<ModelTier, string> = { quality: 'tierQuality', balanced: 'tierBalanced', quota: 'tierQuota' };
+
+function Pill({ strong, children }: { strong?: boolean; children: React.ReactNode }) {
+  // The trigger echoes the item's text; the field is too narrow for tags there.
+  return <span className={cn('rounded-full px-1.5 text-xs leading-5 in-data-[slot=select-trigger]:hidden', strong ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>{children}</span>;
+}
+
 function Panel({ title, help, footer, children }: { title: string; help: string; footer?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-line-strong bg-muted/60 p-1">
-      <header className="px-[17px] pt-2 pb-2.5">
-        <h2 className="font-medium">{title}</h2>
-        <p className="mt-0.5 text-xs text-text-secondary">{help}</p>
+    <section>
+      <header className="mb-2.5 px-1">
+        <h2 className="text-base font-semibold">{title}</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">{help}</p>
       </header>
-      <div className="rounded-md border bg-card dark:bg-background">{children}</div>
-      {footer && <footer className="flex items-center gap-2 px-[17px] py-2">{footer}</footer>}
+      <div className="tile overflow-hidden rounded-xl">
+        {children}
+        {footer && <footer className="flex items-center gap-2 border-t bg-muted/50 px-4 py-2.5">{footer}</footer>}
+      </div>
     </section>
   );
 }

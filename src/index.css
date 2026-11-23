@@ -9,12 +9,12 @@
    than the measured 32px controls. brand.css, button.tsx and input.tsx are shared modules: everything
    here overrides them from outside. */
 :root {
-  --primary: #966570; --ring: #966570; --primary-text: #84565f;
+  --primary: #232323; --ring: #232323; --primary-text: #2b2b2b;
   --soft: color-mix(in oklab, var(--primary) 11%, var(--card));
   --soft-hover: color-mix(in oklab, var(--primary) 17%, var(--card));
   --soft-press: color-mix(in oklab, var(--primary) 23%, var(--card));
   --soft-line: color-mix(in oklab, var(--primary) 30%, transparent);
-  --soft-text: #6f4a53;
+  --soft-text: #232323;
   --radius: 0.625rem;
   --background: oklch(0.985 0 0);
   --foreground: oklch(0.205 0 0);
@@ -35,10 +35,13 @@
   --row-press: color-mix(in oklab, var(--foreground) 8%, transparent);
   --pop-shadow: 0 0 0 1px var(--border), 0 12px 32px -12px oklch(0 0 0 / 0.22);
   --ease-ui: cubic-bezier(0.2, 0, 0, 1);
+  --shadow-border: 0px 0px 0px 1px oklch(0 0 0 / 0.06), 0px 1px 2px -1px oklch(0 0 0 / 0.06), 0px 2px 4px 0px oklch(0 0 0 / 0.04);
+  --shadow-border-hover: 0px 0px 0px 1px oklch(0 0 0 / 0.08), 0px 1px 2px -1px oklch(0 0 0 / 0.08), 0px 2px 4px 0px oklch(0 0 0 / 0.06);
 }
 .dark {
-  --ring: #d3a9b1; --primary-text: #d3a9b1;
-  --soft-text: #e6ccd1;
+  --primary: #ececec; --primary-foreground: #171717;
+  --ring: #d4d4d4; --primary-text: #e5e5e5;
+  --soft-text: #e5e5e5;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.97 0 0);
   --card: oklch(0.185 0 0);
@@ -46,6 +49,8 @@
   --sidebar: oklch(0.13 0 0);
   --muted: oklch(0.205 0 0);
   --pop-shadow: 0 0 0 1px var(--line-strong), 0 16px 40px -12px oklch(0 0 0 / 0.7);
+  --shadow-border: 0 0 0 1px oklch(1 0 0 / 0.08);
+  --shadow-border-hover: 0 0 0 1px oklch(1 0 0 / 0.13);
 }
 
 @theme {
@@ -66,10 +71,12 @@
   --color-text-secondary: var(--text-secondary);
 }
 
-/* A flat surface: card color and a hairline. The border also keeps its edge in forced-colors mode. */
+/* A raised surface: a shadow ring with lift. The transparent border draws the edge in forced-colors mode,
+   which drops box-shadow. */
 @utility tile {
   background-color: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
+  box-shadow: var(--shadow-border);
 }
 
 /* Fades whichever edge still has content to scroll to. Nothing fades when the list fits. */
@@ -113,6 +120,10 @@
 :is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"])[data-size="sm"] { height: 2.25rem; padding-inline: 0.875rem; }
 :is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"])[data-size="icon"] { width: 2.25rem; height: 2.25rem; }
 :is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"])[data-size="icon-sm"] { width: 2rem; height: 2rem; }
+/* Optical balance: the icon side of a text button gets 2px less padding than the text side.
+   CSS cannot tell a leading icon from a trailing one, so buttons with a trailing icon say data-icon="end". */
+[data-slot="button"]:is([data-size="default"], [data-size="sm"]):has(> svg):not([data-icon="end"]) { padding-inline-start: calc(0.875rem - 2px); }
+[data-slot="button"]:is([data-size="default"], [data-size="sm"])[data-icon="end"] { padding-inline-end: calc(0.875rem - 2px); }
 :is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"]):is([data-variant="outline"], [data-variant="secondary"]) {
   border: 1px solid var(--soft-line);
   background: var(--soft);
