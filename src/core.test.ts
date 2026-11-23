@@ -223,6 +223,13 @@ test("digestLines leaves a long sentence with a colon as body, not a lead", () =
   assert.equal(l.lead, undefined);
 });
 
+test("modelOptions lists Gemini 4 names, hides retired 2.x unless saved, and backups stay on flash", () => {
+  const names = ['models/gemini-4-neon', 'models/gemini-3.8-live', 'models/gemini-3.8-flash', 'models/gemini-2.5-flash-lite', 'models/gemini-4-tts', 'models/gemini-3.5-flash-lite'];
+  assert.deepEqual(C.modelOptions(names, []).map(m => m.name), ['gemini-4-neon', 'gemini-3.8-flash', 'gemini-3.5-flash-lite']);
+  assert.ok(C.modelOptions(names, ['gemini-2.5-flash-lite']).some(m => m.name === 'gemini-2.5-flash-lite'));
+  assert.deepEqual(C.backupModels(names), ['gemini-3.5-flash-lite', 'gemini-3.8-flash']);
+});
+
 test("modelOptions keeps text models newest first, tags tiers and always lists the saved choice", () => {
   const got = C.modelOptions(
     ['models/gemini-3.5-flash-lite', 'models/gemini-3.8-flash', 'models/gemini-3.8-pro', 'models/gemini-3.8-flash-preview-tts',

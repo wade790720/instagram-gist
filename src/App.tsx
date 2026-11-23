@@ -3,7 +3,8 @@ import { ArrowRight, ArrowUp } from '@gravity-ui/icons';
 import { groupCounts } from '@/core';
 import { applyTidy } from '@/lib/actions';
 import { t } from '@/lib/i18n';
-import { allItems, emit, ui, useStore } from '@/lib/store';
+import { refreshModels } from '@/lib/gemini';
+import { allItems, db, emit, ui, useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ export function App() {
   const scroller = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(false);
   useEffect(() => { scroller.current?.scrollTo({ top: 0 }); }, [tab, ui.view.cat]);
+  useEffect(() => { void refreshModels(); }, [db.settings.apiKey]);
 
   return (
     <TooltipProvider delayDuration={400}>

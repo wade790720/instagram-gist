@@ -355,10 +355,21 @@ const versionOf = (name: string) => Number(/^gemini-(\d+(?:\.\d+)?)/.exec(name)?
 /** Text models from ListModels, newest first, pro then flash then lite. Previews, TTS, image and other
  *  special-purpose variants are left out. Names in `keep` (the saved choices) are always listed. */
 export function modelOptions(names: string[], keep: string[]): { name: string; tier?: ModelTier }[] {
-  const ok = names.map(n => n.replace(/^models\//, '')).filter(n => /^gemini-(\d[\d.]*-)?(pro|flash|flash-lite)(-latest)?$/.test(n));
+  const ok = names.map(n => n.replace(/^models\//, '')).filter(n => {
+    const v = versionOf(n);
+    // 2.x answers 404 for newer keys. Gemini 4 uses names like gemini-4-neon instead of flash or pro.
+    return (v === 0 || v >= 3) && (/^gemini-(\d[\d.]*-)?(pro|flash|flash-lite)(-latest)?$/.test(n)
+      || (v >= 4 && /^gemini-[\d.]+-(?!live|tts|image|embedding|robotics|omni|audio)[a-z]+$/.test(n)));
+  });
   return [...new Set([...ok, ...keep.filter(Boolean)])]
     .map(name => ({ name, tier: tierOf(name) }))
     .sort((a, b) => versionOf(b.name) - versionOf(a.name)
       || (a.tier ? TIER_ORDER.indexOf(a.tier) : 9) - (b.tier ? TIER_ORDER.indexOf(b.tier) : 9)
       || a.name.localeCompare(b.name));
+}
+
+// Pro is left out so an automatic switch never lands on the priciest model; 2.x answers 404 for newer keys.
+export function backupModels(names: string[]) {
+  const options = modelOptions(names, []).filter(o => versionOf(o.name) >= 3);
+  return (['quota', 'balanced'] as ModelTier[]).flatMap(tier => options.filter(o => o.tier === tier).map(o => o.name));
 }

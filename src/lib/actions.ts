@@ -1,7 +1,7 @@
 import * as Core from '@/core';
 import type { Digest, Item, Lang, Post, User } from '@/core';
 import { record } from './error-log';
-import { gemini } from './gemini';
+import { gemini, Notice } from './gemini';
 import { t, when } from './i18n';
 import { fromIg } from './ig';
 import { clearThumbs, coverJobs, pool } from './thumbs';
@@ -13,7 +13,6 @@ const POSTS_PER_CALL = 150;
 const FRIEND_CHECKS_PER_CALL = 40;
 
 // Stops an action to tell the user something that is not a failure, so it is shown without the error prefix.
-class Notice extends Error {}
 
 export async function run(fn: () => Promise<void>) {
   if (ui.busy) return;
@@ -22,7 +21,7 @@ export async function run(fn: () => Promise<void>) {
   try {
     await fn();
   } catch (e) {
-    if (e instanceof Notice) { status(e.message); return; }
+    if (e instanceof Notice) { status(e.message, e.alert); return; }
     status(t('error', (e as Error).message), true);
     void record(e, 'action').catch(() => {});
   }
@@ -131,7 +130,7 @@ export async function categorize() {
 export const tidyTopics = () => run(async () => {
   status(t('tidying'));
   const items = [...db.saved, ...db.following];
-  const answer = Core.parseJson(await gemini(Core.tidyPrompt(items, db.settings.lang), true, db.settings.summaryModel, db.settings.model));
+  const answer = Core.parseJson(await gemini(Core.tidyPrompt(items, db.settings.lang), true, db.settings.summaryModel));
   const plan = Core.parseTidy(answer, items, db.settings.lang);
   if (!Object.keys(plan.defs).length) throw new Error(t('tidyEmpty'));
   ui.tidy = plan;
@@ -163,7 +162,7 @@ export const sortRest = () => run(async () => { await categorize(); status(t('so
 async function draft(cat: string, old: Digest | undefined, notes: string[]) {
   status(t('summarizing'));
   const posts = Core.orderSources(old?.sourceIds || [], db.saved.filter(x => x.cat === cat));
-  const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang, notes, old?.text), false, db.settings.summaryModel, db.settings.model);
+  const text = await gemini(Core.summaryPrompt(cat, posts, db.settings.lang, notes, old?.text), false, db.settings.summaryModel);
   if (!text.trim()) throw new Error(t('digestEmpty'));
   return { text, sourceIds: posts.map(p => p.id), notes, at: Date.now() };
 }

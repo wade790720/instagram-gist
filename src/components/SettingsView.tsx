@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ArrowUpRightFromSquare, BroomMotion, Sparkles, TrashBin } from '@gravity-ui/icons';
 import { modelOptions, type Lang, type ModelTier } from '@/core';
 import { clearAll, resortAll, saveSettings, tidyTopics } from '@/lib/actions';
 import { t, when } from '@/lib/i18n';
 import { DEFAULTS, db, ui } from '@/lib/store';
-import { listModels } from '@/lib/gemini';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,9 +18,7 @@ export function SettingsView() {
   const set = (k: keyof typeof s) => (e: React.ChangeEvent<HTMLInputElement>) => setS({ ...s, [k]: e.target.value });
   const dirty = FORM_KEYS.some(k => s[k] !== db.settings[k]);
   const save = () => { const done = saveSettings(s); setS({ ...db.settings }); return done; };
-  const [available, setAvailable] = useState<string[]>([]);
-  useEffect(() => { if (db.settings.apiKey) listModels(db.settings.apiKey).then(setAvailable); }, []);
-  const models = modelOptions(available, [s.model, s.summaryModel, DEFAULTS.model, DEFAULTS.summaryModel]);
+  const models = modelOptions(ui.models, [s.model, s.summaryModel, DEFAULTS.model, DEFAULTS.summaryModel]);
   const pick = (k: 'model' | 'summaryModel') => (
     <Select value={s[k]} onValueChange={v => setS({ ...s, [k]: v })}>
       <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>

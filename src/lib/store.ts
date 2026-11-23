@@ -42,6 +42,7 @@ export const ui = {
   status: '',
   err: false,
   progress: null as null | 'busy' | number,
+  models: [] as string[],
   opened: new Set<string>(),
   ask: null as Ask | null,
   tidy: null as null | { merges: [string, string][]; defs: Record<string, string> },
