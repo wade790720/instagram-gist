@@ -51,8 +51,19 @@ export const emit = () => { version++; subs.forEach(f => f()); };
 const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
 export const useStore = () => useSyncExternalStore(subscribe, () => version);
 
-export const DB_KEYS = ['following', 'saved', 'summaries', 'settings', 'lastSync', 'defs', 'clubHint', 'onboarded', 'shortFollowing'] as const satisfies readonly (keyof DB)[];
-export const save = () => chrome.storage.local.set({ ...db });
+// The build fails when DB gains a field this record lacks; DB_KEYS is derived from it.
+const STORED: Record<keyof DB, true> = {
+  following: true, saved: true, summaries: true, settings: true, lastSync: true,
+  defs: true, clubHint: true, onboarded: true, shortFollowing: true,
+};
+export const DB_KEYS = Object.keys(STORED) as (keyof DB)[];
+
+/** Mirrors db into storage: present keys are written, deleted ones removed. Other modules' keys are never touched. */
+export async function save() {
+  await chrome.storage.local.set({ ...db });
+  const gone = DB_KEYS.filter(k => !(k in db));
+  if (gone.length) await chrome.storage.local.remove(gone);
+}
 export const status = (msg: string, err = false) => { Object.assign(ui, { status: msg, err }); emit(); };
 export const setView = (v: Partial<typeof ui.view>) => { Object.assign(ui.view, v); emit(); };
 export const allItems = () => [...db.following, ...db.saved];

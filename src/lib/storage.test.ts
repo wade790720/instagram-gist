@@ -46,6 +46,15 @@ test('"Delete all data" keeps the error-report choice and the settings', async (
   assert.equal(stored.settings.apiKey, 'dev');
 });
 
+test('a field deleted from db is deleted from storage on the next save', async () => {
+  const { db, save } = await import('./store');
+  db.shortFollowing = 3;
+  await save();
+  delete db.shortFollowing;
+  await save();
+  assert.ok(!('shortFollowing' in (await chrome.storage.local.get(null))));
+});
+
 // Every stored shape an older version wrote. load() runs on every page open, so it must be idempotent.
 const legacy = {
   settings: { apiKey: 'k', model: 'gemini-3.8-flash' },

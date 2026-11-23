@@ -238,7 +238,7 @@ export async function clearAll() {
   if (ui.busy || !(await ask({ msg: t('confirmClear'), ok: t('clearData'), danger: true })) || ui.busy) return;
   Object.assign(db, { following: [] as User[], saved: [] as Post[], summaries: {}, lastSync: {}, defs: {} });
   for (const k of Object.keys(avatars)) delete avatars[k];
-  await chrome.storage.local.remove([...DB_KEYS, 'avatars']);
+  await chrome.storage.local.remove(['avatars']);
   await clearThumbs();
   await save();
   emit();
