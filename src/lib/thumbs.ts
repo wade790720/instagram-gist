@@ -28,8 +28,13 @@ export async function coverJobs() {
   const have = new Set((await cache.keys()).map(r => r.url));
   return db.saved.filter(p => p.thumb && !have.has(key(p.id))).map(p => async () => {
     const r = await fetch(p.thumb, { credentials: 'omit', referrerPolicy: 'no-referrer' });
-    if (r.ok) await cache.put(key(p.id), r);
+    if (r.ok) await putCover(p.id, r);
   });
+}
+
+/** The only writer of the cover cache: sync uses it, and the dev mock seeds its covers with it. */
+export async function putCover(id: string, r: Response) {
+  await (await caches.open(CACHE)).put(key(id), r);
 }
 
 export const clearThumbs = () => caches.delete(CACHE);
@@ -38,13 +43,12 @@ export function useThumb(p: Post) {
   const [src, setSrc] = useState<string>();
   const version = ui.thumbsVersion;
   useEffect(() => {
-    if (p.thumb?.startsWith('data:')) return setSrc(p.thumb);
     let url: string | undefined;
     let live = true;
     caches.open(CACHE).then(c => c.match(key(p.id))).then(r => r?.blob()).then(b => {
       if (b && live) setSrc((url = URL.createObjectURL(b)));
     });
     return () => { live = false; if (url) URL.revokeObjectURL(url); };
-  }, [p.id, p.thumb, version]);
+  }, [p.id, version]);
   return src;
 }
