@@ -288,6 +288,8 @@ export function upgrade(s: Stored, lang: Lang): DB {
   // Settings saved before summaryModel existed sorted with 3.8-flash: sorting moves to lite once.
   const model = old?.model === 'gemini-3.8-flash' && !old.summaryModel ? DEFAULTS.model : old?.model;
   const settings: Settings = { ...DEFAULTS, ...old, ...(model && { model }), lang: old?.lang || lang };
+  // The list view was replaced by a compact grid.
+  if ((settings.followView as string) === 'list') settings.followView = 'compact';
   // gemini-2.x returns 404 for keys created after 2026-09-18; move saved settings off it.
   if (/^gemini-2\./.test(settings.model)) settings.model = DEFAULTS.model;
   const lastSync = { ...s.lastSync };

@@ -3,7 +3,7 @@ import type { Lang, Post, Summaries, User } from '@/core';
 
 export interface Settings {
   apiKey: string; model: string; summaryModel: string; lang: Lang;
-  followView: 'grid' | 'list';
+  followView: 'grid' | 'compact';
 }
 export interface DB {
   following: User[];

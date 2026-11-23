@@ -97,6 +97,12 @@ test('upgrade() returns auto-filed posts in 好友 to unsorted, keeps hand-picke
   assert.equal(db.following[0].mutual, false);
 });
 
+test('upgrade() moves a saved list view to the compact grid', async () => {
+  const { upgrade } = await import('./actions');
+  assert.equal(upgrade({ settings: { followView: 'list' } as never }, 'zh').settings.followView, 'compact');
+  assert.equal(upgrade({ settings: { followView: 'grid' } as never }, 'zh').settings.followView, 'grid');
+});
+
 test('upgrade() run twice equals run once, for empty storage and every legacy shape', async () => {
   const { upgrade } = await import('./actions');
   for (const stored of [{}, legacy]) {

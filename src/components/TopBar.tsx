@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { ArrowsRotateRight, Check, ChevronDown, Ellipsis, Gear, LayoutCellsLarge, ListUl, Magnifier, Pencil, Sparkles, TrashBin } from '@gravity-ui/icons';
+import { ArrowsRotateRight, Check, ChevronDown, Ellipsis, Gear, LayoutCells, LayoutCellsLarge, Magnifier, Pencil, Sparkles, TrashBin } from '@gravity-ui/icons';
 import { Popover as PopoverPrimitive } from 'radix-ui';
 import * as Core from '@/core';
 import { deleteTopic, sortRest, sync } from '@/lib/actions';
@@ -223,8 +223,8 @@ function IconButton({ label, onClick, busy, active, children }: { label: string;
 
 function ViewToggle() {
   const v = db.settings.followView;
-  const set = (followView: 'grid' | 'list') => { db.settings.followView = followView; save(); emit(); };
-  const options = [['grid', LayoutCellsLarge, t('viewGrid')], ['list', ListUl, t('viewList')]] as const;
+  const set = (followView: 'grid' | 'compact') => { db.settings.followView = followView; save(); emit(); };
+  const options = [['grid', LayoutCellsLarge, t('viewGrid')], ['compact', LayoutCells, t('viewCompact')]] as const;
   return (
     <div role="group" aria-label={t('viewAs')} className="flex h-9 shrink-0 items-center gap-0.5 rounded-[calc(var(--radius)-2px)] border border-line-strong bg-card p-0.5 shadow-[var(--shadow-xs)]">
       {options.map(([id, Icon, label]) => (
