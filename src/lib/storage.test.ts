@@ -90,3 +90,28 @@ test('upgrade() run twice equals run once, for empty storage and every legacy sh
     assert.deepEqual(upgrade(structuredClone(once), 'en'), once);
   }
 });
+
+test('upgrade() moves only gemini-2.x models to the default', async () => {
+  const { upgrade } = await import('./actions');
+  assert.equal(upgrade({ settings: { model: 'gemini-2.5-flash' } } as never, 'en').settings.model, 'gemini-3.5-flash-lite');
+  assert.equal(upgrade({ settings: { model: 'gemini-25-pro' } } as never, 'en').settings.model, 'gemini-25-pro');
+});
+
+test('onboarding counts as done once one batch is sorted, even if a later batch fails', async () => {
+  const { categorize } = await import('./actions');
+  const { db } = await import('./store');
+  const realFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (async () => ++calls === 1
+    ? new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"1":"行銷"}' }] } }] }))
+    : new Response('{"error":{"message":"bad"}}', { status: 400 })) as typeof fetch;
+  try {
+    db.following = [{ id: 'u9', username: 'z', name: 'Z', pic: '', private: false }];
+    db.saved = [{ id: 'p9', code: 'c', user: 'z', caption: '', alt: '', type: 'post', takenAt: 0, pic: '', thumb: '' }] as never;
+    delete db.onboarded;
+    await assert.rejects(categorize());
+    assert.equal(db.onboarded, true);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

@@ -96,11 +96,11 @@ export async function categorize() {
       const known = cats();
       const answer = Core.parseJson(await gemini(Core.categorizePrompt(batch, known, db.settings.lang, db.defs), true, db.settings.model));
       Core.applyCategories(batch, answer, known, db.settings.lang);
+      db.onboarded = true;
       await save();
       emit();
     }
   }
-  if (!db.onboarded && allItems().some(x => x.cat)) { db.onboarded = true; await save(); }
   if (first && db.clubHint === undefined && allItems().some(x => x.cat)) { db.clubHint = true; await save(); }
 
   // ponytail: asks again on every run while a small topic has no similar big one; cheap on the lite model.
@@ -275,7 +275,7 @@ export function upgrade(s: Stored, lang: Lang): DB {
   const model = old?.model === 'gemini-3.8-flash' && !old.summaryModel ? DEFAULTS.model : old?.model;
   const settings: Settings = { ...DEFAULTS, ...old, ...(model && { model }), lang: old?.lang || lang };
   // gemini-2.x returns 404 for keys created after 2026-09-18; move saved settings off it.
-  if (/^gemini-2./.test(settings.model)) settings.model = DEFAULTS.model;
+  if (/^gemini-2\./.test(settings.model)) settings.model = DEFAULTS.model;
   const lastSync = { ...s.lastSync };
   // Posts stored before covers (thumb) or avatars (pic) existed: fill '' and refetch the whole list on the next sync.
   if (s.saved?.some(p => p.pic === undefined || p.thumb === undefined)) lastSync.saved = 0;
