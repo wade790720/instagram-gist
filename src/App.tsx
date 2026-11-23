@@ -157,23 +157,28 @@ function AskDialog() {
   const a = ui.ask;
   const [text, setText] = useState('');
   useEffect(() => setText(''), [a]);
-  const close = (v: string | true | null) => { a?.resolve(v); ui.ask = null; emit(); };
-  const ok = () => close(a?.input ? text.trim() || null : true);
+  const close = (accepted: boolean) => {
+    if (a?.kind === 'confirm') a.resolve(accepted);
+    else a?.resolve(accepted ? text.trim() || null : null);
+    ui.ask = null;
+    emit();
+  };
+  const ok = () => close(true);
 
   return (
-    <AlertDialog open={!!a} onOpenChange={o => { if (!o) close(null); }}>
+    <AlertDialog open={!!a} onOpenChange={o => { if (!o) close(false); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="text-base">{a?.ok}</AlertDialogTitle>
           <AlertDialogDescription className="whitespace-pre-wrap">{a?.msg}</AlertDialogDescription>
         </AlertDialogHeader>
-        {a?.input && (
+        {a?.kind === 'text' && (
           <Input autoFocus value={text} onChange={e => setText(e.target.value)} aria-label={a.msg}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ok(); } }} />
         )}
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => close(null)}>{t('cancel')}</AlertDialogCancel>
-          <AlertDialogAction onClick={ok} className={cn(a?.danger && 'bg-destructive text-white hover:bg-destructive/90 dark:bg-destructive/60')}>{a?.ok}</AlertDialogAction>
+          <AlertDialogCancel onClick={() => close(false)}>{t('cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={ok} className={cn(a?.kind === 'confirm' && a.danger && 'bg-destructive text-white hover:bg-destructive/90 dark:bg-destructive/60')}>{a?.ok}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

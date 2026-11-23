@@ -5,7 +5,7 @@ import { gemini } from './gemini';
 import { t, when } from './i18n';
 import { fromIg } from './ig';
 import { clearThumbs, coverJobs, pool } from './thumbs';
-import { allItems, ask, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui, uiLang, type DB, type Settings } from './store';
+import { allItems, askConfirm, askText, avatars, db, DB_KEYS, DEFAULTS, emit, save, status, ui, uiLang, type DB, type Settings } from './store';
 
 const DAY = 864e5;
 const FOLLOWS_PER_CALL = 400;
@@ -174,7 +174,7 @@ export async function undoDigest(cat: string, i: number) {
 }
 
 export async function deleteDigest(cat: string, i: number) {
-  if (!(await ask({ msg: t('confirmDeleteDigest'), ok: t('deleteDigest'), danger: true }))) return;
+  if (!(await askConfirm({ msg: t('confirmDeleteDigest'), ok: t('deleteDigest'), danger: true }))) return;
   const list = db.summaries[cat];
   list.splice(i, 1);
   if (!list.length) delete db.summaries[cat];
@@ -193,7 +193,7 @@ export async function renameTopic(from: string, to: string) {
 
 export async function deleteTopic(cat: string) {
   const n = allItems().filter(x => x.cat === cat).length;
-  if (!(await ask({ msg: t('confirmDeleteCat', cat, n), ok: t('deleteCat'), danger: true })) || ui.busy) return;
+  if (!(await askConfirm({ msg: t('confirmDeleteCat', cat, n), ok: t('deleteCat'), danger: true })) || ui.busy) return;
   Core.deleteCat(allItems(), db.summaries, cat);
   delete db.defs[cat];
   if (ui.view.cat === cat) ui.view.cat = '';
@@ -202,8 +202,8 @@ export async function deleteTopic(cat: string) {
 }
 
 export async function moveItem(x: Item, cat: string | null) {
-  const c = cat ?? (await ask({ msg: t('newCatPrompt'), ok: t('create'), input: true }));
-  if (typeof c !== 'string' || !c) return;
+  const c = cat ?? (await askText({ msg: t('newCatPrompt'), ok: t('create') }));
+  if (!c) return;
   x.cat = c;
   x.manual = true;
   await save();
@@ -221,7 +221,7 @@ export async function saveSettings(s: typeof db.settings) {
 }
 
 export const resortAll = async () => {
-  if (!(await ask({ msg: t('confirmResort'), ok: t('recategorize') }))) return;
+  if (!(await askConfirm({ msg: t('confirmResort'), ok: t('recategorize') }))) return;
   run(async () => {
     for (const x of allItems()) if (!x.manual) delete x.cat;
     db.summaries = {};
@@ -233,7 +233,7 @@ export const resortAll = async () => {
 };
 
 export async function clearAll() {
-  if (ui.busy || !(await ask({ msg: t('confirmClear'), ok: t('clearData'), danger: true })) || ui.busy) return;
+  if (ui.busy || !(await askConfirm({ msg: t('confirmClear'), ok: t('clearData'), danger: true })) || ui.busy) return;
   Object.assign(db, { following: [] as User[], saved: [] as Post[], summaries: {}, lastSync: {}, defs: {} });
   for (const k of Object.keys(avatars)) delete avatars[k];
   await chrome.storage.local.remove(['avatars']);

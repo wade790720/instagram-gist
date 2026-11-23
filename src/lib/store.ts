@@ -17,7 +17,10 @@ export interface DB {
   shortFollowing?: number;
 }
 export type Tab = 'following' | 'saved' | 'digests' | 'settings';
-export interface Ask { msg: string; ok: string; input?: boolean; danger?: boolean; resolve: (v: string | true | null) => void }
+interface AskBase { msg: string; ok: string }
+export type Ask =
+  | (AskBase & { kind: 'confirm'; danger?: boolean; resolve: (yes: boolean) => void })
+  | (AskBase & { kind: 'text'; resolve: (text: string | null) => void });
 
 // Free tier, 2026-09: 3.5-flash-lite ~500 calls/day (sorting needs many), 3.8-flash ~20/day
 // (better writing; enough for digests).
@@ -68,5 +71,8 @@ export const status = (msg: string, err = false) => { Object.assign(ui, { status
 export const setView = (v: Partial<typeof ui.view>) => { Object.assign(ui.view, v); emit(); };
 export const allItems = () => [...db.following, ...db.saved];
 
-export const ask = (a: Omit<Ask, 'resolve'>) =>
-  new Promise<string | true | null>(resolve => { ui.ask = { ...a, resolve }; emit(); });
+// Not confirm/prompt: a missed import would still compile and open the browser's own dialog.
+export const askConfirm = (a: AskBase & { danger?: boolean }) =>
+  new Promise<boolean>(resolve => { ui.ask = { ...a, kind: 'confirm', resolve }; emit(); });
+export const askText = (a: AskBase) =>
+  new Promise<string | null>(resolve => { ui.ask = { ...a, kind: 'text', resolve }; emit(); });

@@ -38,7 +38,8 @@ test('"Delete all data" keeps the error-report choice and the settings', async (
   await chrome.storage.local.set({ errorReporting: 'off' });
   const done = clearAll();
   await new Promise(r => setTimeout(r, 0));
-  ui.ask!.resolve(true);
+  assert.equal(ui.ask?.kind, 'confirm');
+  if (ui.ask?.kind === 'confirm') ui.ask.resolve(true);
   await done;
   const stored = await chrome.storage.local.get(null);
   assert.equal(stored.errorReporting, 'off');
