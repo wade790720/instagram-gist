@@ -26,21 +26,60 @@ assert.equal(C.slimUser({ pk: 42, username: 'a' }).id, '42');
 });
 
 test("slimUser keeps the friend signals and the avatar URL", () => {
-assert.deepEqual(C.slimUser({ pk: 7, username: 'b', full_name: 'B', is_private: true, is_verified: false, profile_pic_url: 'https://cdn/b.jpg' }), { id: '7', username: 'b', name: 'B', private: true, verified: false, pic: 'https://cdn/b.jpg' });
+assert.deepEqual(C.slimUser({ pk: 7, username: 'b', full_name: 'B', is_private: true, is_verified: false, profile_pic_url: 'https://cdn/b.jpg' }), { id: '7', username: 'b', name: 'B', private: true, verified: false, mutual: false, pic: 'https://cdn/b.jpg' });
 assert.equal(C.slimUser({ pk: 8, username: 'c' }).pic, '');
 });
 
-test("markFriends: mutual or private, never verified or hand-picked, stale labels dropped", () => {
+const follow = (id: string, extra: Partial<C.User> = {}): C.User => ({ id, username: 'u' + id, name: '', private: false, verified: false, mutual: false, pic: '', ...extra });
+
+test("markFriends: only mutual and private is a friend outright; verified, hand-picked and stale labels stay out", () => {
 const people = [
-  { id: '1', private: true, verified: false },
-  { id: '2', private: false, verified: false },
-  { id: '3', private: false, verified: false, cat: '美髮' },
-  { id: '4', private: true, verified: true, cat: '音樂' },
-  { id: '5', private: true, verified: false, cat: '滑雪', manual: true },
-  { id: '6', private: false, verified: false, cat: '好友' },
+  follow('1', { private: true }),
+  follow('2'),
+  follow('3', { cat: '美髮' }),
+  follow('4', { private: true, verified: true, cat: '音樂' }),
+  follow('5', { private: true, cat: '滑雪', manual: true }),
+  follow('6', { cat: '好友' }),
+  follow('7', { private: true }),
 ];
-assert.equal(C.markFriends(people, new Set(['2']), 'zh'), 2);
-assert.deepEqual(people.map(p => p.cat), ['好友', '好友', '美髮', '音樂', '滑雪', undefined]);
+assert.equal(C.markFriends(people, new Set(['2', '4', '5', '7']), 'zh'), 1);
+assert.deepEqual(people.map(p => p.cat), [undefined, undefined, '美髮', '音樂', '滑雪', undefined, '好友']);
+});
+
+test("friendCandidates asks about one-signal accounts only, once", () => {
+const people = [
+  follow('1', { mutual: true }),
+  follow('2', { private: true }),
+  follow('3', { mutual: true, private: true }),
+  follow('4'),
+  follow('5', { mutual: true, verified: true }),
+  follow('6', { mutual: true, manual: true, cat: '商業' }),
+  follow('7', { mutual: true, kind: 'page' }),
+];
+assert.deepEqual(C.friendCandidates(people).map(u => u.id), ['1', '2']);
+});
+
+test("applyFriendCheck: a shop is not a friend, and unsure needs a mutual follow", () => {
+const batch = [follow('1', { mutual: true }), follow('2', { mutual: true }), follow('3', { mutual: true }), follow('4', { private: true }), follow('5', { mutual: true })];
+C.applyFriendCheck(batch, { 1: 'person', 2: 'page', 3: 'unsure', 4: 'unsure', 5: 'nonsense' }, 'zh');
+assert.deepEqual(batch.map(u => [u.kind, u.cat]), [['person', '好友'], ['page', undefined], ['person', '好友'], ['page', undefined], [undefined, undefined]]);
+});
+
+test("a checked account stays checked after a refetch, and labelFriends restores it after a re-sort", () => {
+const [kept] = C.keepCats([follow('1')], [follow('1', { kind: 'person', mutual: true, cat: '好友' })]);
+assert.equal(kept.kind, 'person');
+const person = follow('1', { kind: 'person', mutual: true });
+C.labelFriends([person], 'zh');
+assert.equal(person.cat, '好友');
+});
+
+test("the topic prompt never offers 好友, even when it is the only category so far", () => {
+const prompt = C.categorizePrompt([follow('1')], ['好友'], 'zh');
+assert.ok(!prompt.includes('好友'));
+assert.ok(prompt.includes('行銷'));
+const x = follow('2');
+C.applyCategories([x], { 1: '好友' }, ['好友', '行銷'], 'zh');
+assert.equal(x.cat, '其他');
 });
 
 test("keepCats, uniqById and mergeById keep topics, manual picks and order", () => {

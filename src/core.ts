@@ -7,7 +7,7 @@ interface Tagged {
   manual?: boolean;
   pic: string;
 }
-export interface User extends Tagged { username: string; name: string; private: boolean; verified: boolean }
+export interface User extends Tagged { username: string; name: string; private: boolean; verified: boolean; mutual: boolean; kind?: 'person' | 'page' }
 export interface Post extends Tagged {
   code: string; user: string; caption: string; alt: string; type: PostType; takenAt: number;
   thumb: string;
@@ -81,20 +81,54 @@ export function slimPost(m: IgMedia): Post {
 }
 
 export const slimUser = (u: IgUser): User =>
-  ({ id: idOf(u), username: u.username, name: u.full_name || '', private: !!u.is_private, verified: !!u.is_verified, pic: u.profile_pic_url || '' });
+  ({ id: idOf(u), username: u.username, name: u.full_name || '', private: !!u.is_private, verified: !!u.is_verified, mutual: false, pic: u.profile_pic_url || '' });
 
-// ponytail: mutual small shops/creators land here too; the user moves them once (manual sticks).
-export function markFriends(users: User[], followerIds: Set<string>, l: string) {
+export const friendsLabel = (l: string) => lang(l).friends;
+
+// Mutual and private is a friend outright. One signal alone also fits shops and creators, so the model checks those.
+const isFriend = (u: User) => !u.verified && ((u.mutual && u.private) || (u.kind === 'person' && (u.mutual || u.private)));
+
+export function labelFriends(users: User[], l: string) {
   const label = lang(l).friends;
   let n = 0;
   for (const u of users) {
     if (u.manual) continue;
     if (u.cat === label) delete u.cat;
-    if (u.verified || !(u.private || followerIds.has(u.id))) continue;
+    if (!isFriend(u)) continue;
     u.cat = label;
     n++;
   }
   return n;
+}
+
+export function markFriends(users: User[], followerIds: Set<string>, l: string) {
+  for (const u of users) u.mutual = followerIds.has(u.id);
+  return labelFriends(users, l);
+}
+
+export const friendCandidates = (users: User[]) =>
+  users.filter(u => !u.manual && !u.verified && !u.kind && (u.mutual || u.private) && !(u.mutual && u.private));
+
+export function friendPrompt(users: User[]) {
+  return [
+    'Each line is an Instagram account: its handle and display name. Decide who runs it.',
+    '- "person": one private individual, such as a real name or a personal nickname.',
+    '- "page": a shop, brand, studio, salon, restaurant, school, organization, media, fan, meme or topic account, or a person using the account as a business.',
+    '- "unsure": the handle and name do not show which.',
+    'Return only a JSON object that maps every number to "person", "page" or "unsure", e.g. {"1": "person", "2": "page"}.',
+    '',
+    ...users.map((u, i) => `${i + 1}. ${itemText(u)}`),
+  ].join('\n');
+}
+
+// "unsure" counts as a person only for a mutual follow: following each other is the stronger signal.
+export function applyFriendCheck(batch: User[], map: Record<string, unknown>, l: string) {
+  batch.forEach((u, i) => {
+    const v = map[String(i + 1)];
+    if (v !== 'person' && v !== 'page' && v !== 'unsure') return;
+    u.kind = v === 'person' || (v === 'unsure' && u.mutual) ? 'person' : 'page';
+    if (u.kind === 'person') u.cat = lang(l).friends;
+  });
 }
 
 // IG's list paging can repeat an account or post across pages. First copy wins, order kept.
@@ -106,8 +140,9 @@ export const uniqById = <T extends Tagged>(xs: T[]): T[] => {
 export function keepCats<T extends Tagged>(fresh: T[], old: T[]): T[] {
   const prev = new Map(old.map(x => [x.id, x]));
   return uniqById(fresh).map(x => {
-    const o = prev.get(x.id);
-    return o?.cat ? { ...x, cat: o.cat, ...(o.manual && { manual: true }) } : x;
+    const o = prev.get(x.id) as (T & Pick<User, 'kind'>) | undefined;
+    const kept = o?.kind ? { ...x, kind: o.kind } : x;
+    return o?.cat ? { ...kept, cat: o.cat, ...(o.manual && { manual: true }) } : kept;
   });
 }
 
@@ -129,7 +164,9 @@ export function itemText(x: Item, max = 300) {
 // user's own categories once there are any, the starting list before that.
 export function categorizePrompt(items: Item[], cats: string[], l: string, defs: Record<string, string> = {}) {
   const L = lang(l);
-  const list = cats.length ? cats : [...L.topics, L.other];
+  // 好友 comes from the follow graph, never from the text. On a first sync it can be the only category there is.
+  const named = cats.filter(c => c !== L.friends);
+  const list = named.length ? named : [...L.topics, L.other];
   return [
     'Sort these Instagram items (followed accounts or saved posts) into broad topic categories.',
     ...(list.some(c => defs[c])
@@ -184,7 +221,7 @@ export function applyCategories(batch: Tagged[], map: Record<string, unknown>, k
     const c = map[String(i + 1)];
     if (typeof c !== 'string' || !c.trim()) return;
     const name = c.trim();
-    x.cat = !l || known.includes(name) || fitsRule(name, l) ? name : lang(l).other;
+    x.cat = !l || (name !== lang(l).friends && (known.includes(name) || fitsRule(name, l))) ? name : lang(l).other;
     n++;
   });
   return n;

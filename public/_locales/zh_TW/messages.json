@@ -13,6 +13,7 @@
   "noBookmarks": { "message": "還沒有摘要。到「收藏」點一個分類，按「產生摘要」。" },
   "syncingSaved": { "message": "正在抓收藏…" },
   "syncingFollowing": { "message": "正在抓追蹤名單…" },
+  "checkingFriends": { "message": "正在判斷哪些是好友（$1 / $2）…" },
   "syncingFollowers": { "message": "正在抓粉絲名單（用來找出互相追蹤的好友）…" },
   "syncingImages": { "message": "正在下載頭像和收藏的圖片 $1 / $2…" },
   "openPost": { "message": "在 Instagram 開啟 @$1 的貼文" },

@@ -13,6 +13,7 @@
   "noBookmarks": { "message": "No digests yet. Open a topic in Saved and press \"Make digest\"." },
   "syncingSaved": { "message": "Fetching saved posts…" },
   "syncingFollowing": { "message": "Fetching accounts you follow…" },
+  "checkingFriends": { "message": "Checking who is a friend ($1 / $2)…" },
   "syncingFollowers": { "message": "Fetching your followers (to find mutual-follow friends)…" },
   "syncingImages": { "message": "Downloading images $1 / $2…" },
   "openPost": { "message": "Open @$1's post on Instagram" },

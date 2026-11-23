@@ -83,6 +83,20 @@ test('load() upgrades every legacy shape, and loading again changes nothing', as
   assert.deepEqual(db, once);
 });
 
+test('upgrade() returns auto-filed posts in 好友 to unsorted, keeps hand-picked ones, and refetches follows without the mutual signal', async () => {
+  const { upgrade } = await import('./actions');
+  const post = { code: 'c', user: 'a', caption: '', alt: '', type: 'post' as const, takenAt: 0, pic: '', thumb: '' };
+  const db = upgrade({
+    settings: { lang: 'zh' } as never,
+    saved: [{ ...post, id: 'p1', cat: '好友' }, { ...post, id: 'p2', cat: '好友', manual: true }],
+    following: [{ id: 'u1', username: 'a', name: '', private: false, verified: false, pic: '' }],
+    lastSync: { following: 5 },
+  }, 'zh');
+  assert.deepEqual(db.saved.map(p => p.cat), [undefined, '好友']);
+  assert.equal(db.lastSync.following, 0);
+  assert.equal(db.following[0].mutual, false);
+});
+
 test('upgrade() run twice equals run once, for empty storage and every legacy shape', async () => {
   const { upgrade } = await import('./actions');
   for (const stored of [{}, legacy]) {

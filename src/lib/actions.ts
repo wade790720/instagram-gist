@@ -10,6 +10,7 @@ import { allItems, askConfirm, askText, avatars, db, DB_KEYS, DEFAULTS, emit, sa
 const DAY = 864e5;
 const FOLLOWS_PER_CALL = 400;
 const POSTS_PER_CALL = 150;
+const FRIEND_CHECKS_PER_CALL = 40;
 
 // Stops an action to tell the user something that is not a failure, so it is shown without the error prefix.
 class Notice extends Error {}
@@ -91,6 +92,15 @@ function avatarDownloads() {
 export async function categorize() {
   const first = !allItems().some(x => x.cat);
   const cats = () => Core.groupCounts(allItems()).map(([c]) => c);
+  const candidates = Core.friendCandidates(db.following);
+  for (let i = 0; i < candidates.length; i += FRIEND_CHECKS_PER_CALL) {
+    ui.progress = i / candidates.length;
+    status(t('checkingFriends', i, candidates.length));
+    const batch = candidates.slice(i, i + FRIEND_CHECKS_PER_CALL);
+    Core.applyFriendCheck(batch, Core.parseJson(await gemini(Core.friendPrompt(batch), true, db.settings.model)), db.settings.lang);
+    await save();
+    emit();
+  }
   for (const [list, size] of [[db.following, FOLLOWS_PER_CALL], [db.saved, POSTS_PER_CALL]] as [Item[], number][]) {
     const todo = list.filter(x => !x.cat);
     for (let i = 0; i < todo.length; i += size) {
@@ -246,6 +256,7 @@ export const resortAll = async () => {
   if (!(await askConfirm({ msg: t('confirmResort'), ok: t('recategorize') }))) return;
   run(async () => {
     for (const x of allItems()) if (!x.manual) delete x.cat;
+    Core.labelFriends(db.following, db.settings.lang);
     db.summaries = {};
     await save();
     if (!db.settings.apiKey) return status(t('needKey'));
@@ -269,7 +280,7 @@ type Legacy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 type Stored = Partial<Omit<DB, 'summaries' | 'saved' | 'following'>> & {
   summaries?: Parameters<typeof Core.normalizeSummaries>[0];
   saved?: Legacy<Post, 'pic' | 'thumb'>[];
-  following?: Legacy<User, 'pic' | 'private'>[];
+  following?: Legacy<User, 'pic' | 'private' | 'mutual'>[];
 };
 
 /** Brings any stored shape up to DB. Pure, and load() runs it on every page open, so each step must be idempotent. */
@@ -283,11 +294,18 @@ export function upgrade(s: Stored, lang: Lang): DB {
   const lastSync = { ...s.lastSync };
   // Posts stored before covers (thumb) or avatars (pic) existed: fill '' and refetch the whole list on the next sync.
   if (s.saved?.some(p => p.pic === undefined || p.thumb === undefined)) lastSync.saved = 0;
-  const saved = Core.uniqById((s.saved ?? []).map(p => ({ ...p, pic: p.pic ?? '', thumb: p.thumb ?? '' })));
-  // Follows stored before the friend rule (private) or avatars (pic) existed: refetch on the next sync.
+  // Older versions let the model file posts under 好友. Those go back to unsorted; hand-picked ones stay.
+  const friends = Core.friendsLabel(settings.lang);
+  const notFriend = <T extends { cat?: string; manual?: boolean }>(p: T): T => {
+    if (p.cat !== friends || p.manual) return p;
+    const { cat: _, ...rest } = p;
+    return rest as T;
+  };
+  const saved = Core.uniqById((s.saved ?? []).map(p => notFriend({ ...p, pic: p.pic ?? '', thumb: p.thumb ?? '' })));
+  // Follows stored before the friend signals (private, mutual) or avatars (pic) existed: refetch on the next sync.
   const first = s.following?.[0];
-  if (first && (first.private === undefined || first.pic === undefined)) lastSync.following = 0;
-  const following = Core.uniqById((s.following ?? []).map(u => ({ ...u, pic: u.pic ?? '', private: u.private ?? false })));
+  if (first && (first.private === undefined || first.mutual === undefined || first.pic === undefined)) lastSync.following = 0;
+  const following = Core.uniqById((s.following ?? []).map(u => ({ ...u, pic: u.pic ?? '', private: u.private ?? false, mutual: u.mutual ?? false })));
   return {
     ...s, settings, following, saved, lastSync,
     summaries: Core.normalizeSummaries(s.summaries),

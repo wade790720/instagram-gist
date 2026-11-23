@@ -6,7 +6,7 @@ const cats = ['好友', '行銷商業', '科技資訊', '藝術設計', '攝影�
 const names = ['angiewong_98', 'pb_design_lab', 'aiposthub', 'kevin_learn', 'plantica_jp', 'jessie.chu51', 'harryspeaks_', 'tenten.co', 'maxstudio.biz', 'growithfyn', 'olga.passione', 'joshuavermillion'];
 const following = Array.from({ length: 48 }, (_, i) => ({
   id: String(i), username: names[i % names.length] + (i >= names.length ? i : ''), name: ['Angie Wong', '設計實驗室｜AI × 設計', 'AI郵報', '凱文設計 Kevin', 'plantica', '朱德淮'][i % 6],
-  private: i % 3 === 0, verified: false, pic: '', cat: i % 9 === 8 ? undefined : cats[i % cats.length],
+  private: i % 3 === 0, mutual: i % 2 === 0, verified: false, pic: '', cat: i % 9 === 8 ? undefined : cats[i % cats.length],
 }));
 const saved = Array.from({ length: 24 }, (_, i) => ({
   id: 's' + i, code: 'C' + i, user: names[i % names.length], type: (['image', 'video', 'carousel'] as const)[i % 3], takenAt: 0, pic: '',
