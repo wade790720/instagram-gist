@@ -10,7 +10,9 @@ const cats = english
   : ['好友', '行銷商業', '科技資訊', '藝術設計', '攝影剪輯', '生活休閒', '音樂影視'];
 const names = ['angiewong_98', 'pb_design_lab', 'aiposthub', 'kevin_learn', 'plantica_jp', 'jessie.chu51', 'harryspeaks_', 'tenten.co', 'maxstudio.biz', 'growithfyn', 'olga.passione', 'joshuavermillion'];
 const following = Array.from({ length: 48 }, (_, i) => ({
-  id: String(i), username: names[i % names.length] + (i >= names.length ? i : ''), name: ['Angie Wong', '設計實驗室｜AI × 設計', 'AI郵報', '凱文設計 Kevin', 'plantica', '朱德淮'][i % 6],
+  id: String(i), username: names[i % names.length] + (i >= names.length ? i : ''), name: (english
+    ? ['Angie Wong', 'Design Lab | AI × Design', 'AI Post', 'Kevin Learns Design', 'plantica', 'Jessie Chu']
+    : ['Angie Wong', '設計實驗室｜AI × 設計', 'AI郵報', '凱文設計 Kevin', 'plantica', '朱德淮'])[i % 6],
   private: i % 3 === 0, mutual: i % 2 === 0, verified: false, pic: '', cat: i % 9 === 8 ? undefined : cats[i % cats.length],
 }));
 const saved = Array.from({ length: 24 }, (_, i) => ({
@@ -26,7 +28,19 @@ function sampleCover(i: number, h: number) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 ${h}"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.62 0.14 ${a})"/><stop offset="1" stop-color="oklch(0.4 0.12 ${b})"/></linearGradient></defs><rect width="1080" height="${h}" fill="url(#g)"/></svg>`;
   return new Response(svg, { headers: { 'Content-Type': 'image/svg+xml' } });
 }
-const summaries = {
+const summaries = english ? {
+  Marketing: [{ id: 'd1', text: '• Key | Sales formula: pain point + solution. Describe the reader\'s situation first, then give steps they can follow [1][3]\n• How | Opening hook:\n   ◦ Keep strangers in the first 3 seconds with a contrast line, such as "It took me three years to see this" [2]\n   ◦ Put only one sentence on the first slide, big enough to read on a phone [3]\n• Try | Today: rewrite the first line of your latest video as a contrast line and compare 3-second retention [2]\n• Note | Comment-for-resource: send the reply by DM so it is not marked as spam [4]', sourceIds: ['s1', 's5', 's9', 's13'], notes: ['Turn into one formula'], at: Date.now() }, { id: 'd2', title: 'Edited note', sourceIds: ['s1', 's5', 's9', 's13'], at: Date.now(), text: 'Situation first, then the method', edited: {
+    thesis: 'Content sells when the first 3 seconds name the reader\'s situation, not when the method is complete.',
+    chapters: [
+      { claim: 'Name the pain first, or nobody hears the method', points: [{ text: 'The sales formula is pain point plus solution', sources: [1, 3, 4], kind: 'principle' as const }, { text: 'All three real examples describe the situation before the steps', sources: [3], kind: 'case' as const }] },
+      { claim: 'The opening has one job: keep strangers watching', points: [{ text: 'Three-step opening', sources: [2], kind: 'principle' as const, steps: ['Say the reader\'s situation', 'Add one contrast line', 'Promise what they get at the end'] }, { text: 'One sentence on the first slide', sources: [3], kind: 'principle' as const }] },
+    ],
+    tensions: [{ a: { text: 'Give the answer right away', sources: [1] }, b: { text: 'Build curiosity, then give the answer', sources: [2] } }],
+    actions: ['Rewrite the first line of your latest video as a contrast line'],
+    resources: [{ text: 'Free marketing live stream, 2026/5/30', sources: [4] }],
+    thin: 2,
+  } }],
+} : {
   行銷商業: [{ id: 'd1', text: '• 重點｜銷售公式：痛點情境 + 解決方案，先描述讀者的處境，再給可以照做的方法 [1][3]\n• 做法｜開場鉤子：\n   ◦ 前 3 秒用反差句留住陌生人，例如「我花了三年才發現」[2]\n   ◦ 字卡第一張只放一句話，字級要大到手機上不用放大 [3]\n• 照做｜今天就試：把最近一支影片的開頭改成反差句，比較 3 秒留存 [2]\n• 留意｜留言換資源：回覆要用私訊送出，避免被當成垃圾留言 [4]', sourceIds: ['s1', 's5', 's9', 's13'], notes: ['收斂成固定公式'], at: Date.now() }, { id: 'd2', title: '編輯筆記', sourceIds: ['s1', 's5', 's9', 's13'], at: Date.now(), text: '先講處境，再給方法', edited: {
     thesis: '內容能不能賣，取決於前 3 秒有沒有說中讀者的處境，而不是方法多完整。',
     chapters: [

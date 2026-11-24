@@ -1,6 +1,6 @@
 // Chrome Web Store screenshots, 1280x800, from the dev preview with its sample data (src/dev/mock.ts).
 //   node scripts/store-shots.mjs [out-dir]        (default .local/store-shots)
-// Writes zh-dark.png (the app itself) and en-framed.png (English app inside the store frame).
+// Writes zh-1.png … zh-5.png and en-1.png … en-5.png: one highlight each, the app inside the store frame.
 // Drives the installed Chrome over the DevTools protocol, so it needs no extra npm package. Set CHROME to override its path.
 import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -15,6 +15,28 @@ const PORT = 5189, DEBUG = 9333;
 const APP = `http://localhost:${PORT}/app.html`;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 mkdirSync(OUT, { recursive: true });
+
+// Page helpers. Labels come from the app's own messages, so the same steps work in both languages.
+const HELPERS = `
+  const msg = k => chrome.i18n.getMessage(k);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const button = pick => [...document.querySelectorAll('button')].find(pick);
+  const tab = async k => { button(b => b.textContent.trim().startsWith(msg(k))).click(); await wait(600); };
+  const openNote = async () => { const b = button(b => b.textContent.includes(msg('noteTitle'))); if (b.getAttribute('aria-expanded') !== 'true') b.click(); await wait(600); };
+`;
+// One highlight per screenshot: what to do in the app, and the headline for each language.
+const SHOTS = [
+  { steps: '', zh: '收藏的貼文，<br>自動分好類。', en: 'Sort your saved posts<br>into topics, automatically.' },
+  { steps: `await tab('tabBookmarks'); await openNote();`, zh: '每個主題，<br>整理成一份筆記。', en: 'Turn each topic<br>into a one-page note.' },
+  { steps: `await tab('tabBookmarks'); await openNote();
+      const h = [...document.querySelectorAll('*')].find(e => [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim() === msg('noteTensions')));
+      h.scrollIntoView({ block: 'start' }); document.scrollingElement.scrollBy(0, -140); await wait(400);`,
+    zh: '說法哪裡不同、<br>這週先做什麼，一眼看懂。', en: 'See where advice disagrees,<br>and what to do this week.' },
+  { steps: `await tab('tabFollowing');`, zh: '你追蹤的帳號，<br>也幫你分好類。', en: 'Know who you follow,<br>by topic.' },
+  { steps: `const b = button(b => (b.getAttribute('aria-label') ?? '').includes(msg('moveTo')));
+      b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType: 'mouse' })); b.click(); await wait(600);`,
+    zh: '分錯了？<br>一鍵改分類。', en: 'Wrong topic?<br>Fix it in one click.' },
+];
 
 async function until(probe, what) {
   for (let i = 0; i < 80; i++) { try { const v = await probe(); if (v) return v; } catch { /* not up yet */ } await sleep(250); }
@@ -35,17 +57,21 @@ const send = (method, params = {}) => new Promise((ok, fail) => {
   pending.set(id, msg => (msg.error ? fail(new Error(`${method}: ${msg.error.message}`)) : ok(msg.result)));
   ws.send(JSON.stringify({ id, method, params }));
 });
-const evaluate = async expression => (await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })).result.value;
+async function evaluate(expression) {
+  const { result, exceptionDetails } = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
+  if (exceptionDetails) throw new Error(exceptionDetails.exception?.description ?? exceptionDetails.text);
+  return result.value;
+}
 
-async function shot(url, file, { width = 1280, height = 800, scale = 1, dark = false, ready }) {
+async function shot(url, file, { width = 1280, height = 800, scale = 1, ready, steps = '' }) {
   await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: scale, mobile: false });
-  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: dark ? 'dark' : 'light' }] });
+  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
   await send('Page.navigate', { url });
   await until(() => evaluate(ready), `${file} to render`);
+  if (steps) await evaluate(`(async () => { ${HELPERS} ${steps} })()`);
   await sleep(800); // covers and fonts settle
   const { data } = await send('Page.captureScreenshot', { format: 'png' });
   writeFileSync(file, Buffer.from(data, 'base64'));
-  console.log('saved', file);
 }
 
 try {
@@ -55,18 +81,22 @@ try {
   ws.onmessage = e => { const msg = JSON.parse(e.data); pending.get(msg.id)?.(msg); pending.delete(msg.id); };
   await new Promise(r => (ws.onopen = r));
 
-  const appReady = `document.querySelectorAll('img').length > 5`; // the saved grid has drawn its covers
-  await shot(APP, join(OUT, 'zh-dark.png'), { dark: true, ready: appReady });
-
-  const inner = join(OUT, 'en-inner.png');
-  await shot(`${APP}?lang=en`, inner, { width: 1100, height: 720, scale: 2, ready: appReady });
-  const frame = new URL(pathToFileURL(join(ROOT, 'scripts/store-frame.html')));
-  frame.search = new URLSearchParams({
-    title: 'Sort your saved posts<br>into topics, automatically.',
-    orb: pathToFileURL(join(ROOT, 'public/icons/icon-128.png')).href,
-    shot: pathToFileURL(inner).href,
-  }).toString();
-  await shot(frame.href, join(OUT, 'en-framed.png'), { ready: `[...document.images].every(i => i.complete && i.naturalWidth)` });
+  const inner = join(OUT, 'inner.png');
+  for (const lang of ['zh', 'en']) {
+    for (const [i, s] of SHOTS.entries()) {
+      await shot(`${APP}${lang === 'en' ? '?lang=en' : ''}`, inner,
+        { width: 1100, height: 720, scale: 2, steps: s.steps, ready: `document.querySelectorAll('img').length > 5` });
+      const frame = new URL(pathToFileURL(join(ROOT, 'scripts/store-frame.html')));
+      frame.search = new URLSearchParams({
+        title: s[lang],
+        orb: pathToFileURL(join(ROOT, 'public/icons/icon-128.png')).href,
+        shot: pathToFileURL(inner).href,
+      }).toString();
+      const file = join(OUT, `${lang}-${i + 1}.png`);
+      await shot(frame.href, file, { ready: `[...document.images].every(i => i.complete && i.naturalWidth)` });
+      console.log('saved', file);
+    }
+  }
   rmSync(inner);
 } finally {
   ws?.close();

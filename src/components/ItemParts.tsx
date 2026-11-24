@@ -48,7 +48,7 @@ export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: st
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => moveItem(x, null)}><Plus />{t('newCat').replace(/^＋\s*/, '')}</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => moveItem(x, null)}><Plus />{t('newCat').replace(/^[＋+]\s*/, '')}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
