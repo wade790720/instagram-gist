@@ -97,6 +97,54 @@ test('upgrade() returns auto-filed posts in 好友 to unsorted, keeps hand-picke
   assert.equal(db.following[0].mutual, false);
 });
 
+test('editDigest adds an edited note beside the old digest and leaves it untouched', async () => {
+  const { editDigest } = await import('./actions');
+  const { db, save } = await import('./store');
+  const post = (id: string) => ({ id, code: id, user: 'a', caption: '內容', alt: '', type: 'post' as const, takenAt: 0, pic: '', thumb: '', cat: '商業' });
+  db.saved = [post('a1'), post('a2')];
+  const old = { id: 'old', text: '• 舊摘要 [1]', sourceIds: ['a1'] };
+  db.summaries = { 商業: [old] };
+  await save();
+  const realFetch = globalThis.fetch;
+  const reply = (text: string) => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }));
+  globalThis.fetch = (async (_url: string, init: RequestInit) => String(init.body).includes('book editor')
+    ? reply(JSON.stringify({ thesis: '先選對問題', chapters: [{ claim: '先刪減', points: [{ text: '刪掉多餘流程', sources: [1] }] }] }))
+    : reply(JSON.stringify({ claims: [{ n: 1, kind: 'principle', text: '刪掉多餘流程' }] }))) as typeof fetch;
+  try {
+    await editDigest('商業', 0);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  assert.equal(db.summaries['商業'].length, 2);
+  assert.equal(db.summaries['商業'][0].text, '• 舊摘要 [1]');
+  assert.equal(db.summaries['商業'][1].edited?.thesis, '先選對問題');
+  assert.equal(db.summaries['商業'][1].edited?.thin, 1);
+});
+
+test('createDigest writes an edited note, and a topic with no usable text stops with a calm notice', async () => {
+  const { createDigest } = await import('./actions');
+  const { db, save, ui } = await import('./store');
+  const post = { id: 'c1', code: 'c1', user: 'a', caption: '內容', alt: '', type: 'post' as const, takenAt: 0, pic: '', thumb: '', cat: '測試' };
+  db.saved = [post];
+  db.summaries = {};
+  await save();
+  const realFetch = globalThis.fetch;
+  const reply = (text: string) => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }));
+  try {
+    globalThis.fetch = (async () => reply(JSON.stringify({ claims: [], skipped: [{ n: 1, why: 'teaser' }] }))) as typeof fetch;
+    await createDigest('測試');
+    assert.equal(db.summaries['測試'], undefined);
+    assert.equal(ui.err, false);
+    globalThis.fetch = (async (_url: string, init: RequestInit) => String(init.body).includes('book editor')
+      ? reply(JSON.stringify({ thesis: '主張', chapters: [{ claim: '章節', points: [{ text: '觀點', sources: [1] }, { text: '第二點', sources: [1] }] }] }))
+      : reply(JSON.stringify({ claims: [{ n: 1, kind: 'principle', text: '觀點' }] }))) as typeof fetch;
+    await createDigest('測試');
+    assert.equal(db.summaries['測試'][0].edited?.thesis, '主張');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
 test('upgrade() moves a saved list view to the compact grid', async () => {
   const { upgrade } = await import('./actions');
   assert.equal(upgrade({ settings: { followView: 'list' } as never }, 'zh').settings.followView, 'compact');

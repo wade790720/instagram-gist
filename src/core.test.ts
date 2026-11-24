@@ -234,6 +234,120 @@ test("summaryPrompt asks for the four tags in the digest language", () => {
   for (const tag of ['重點', '做法', '照做', '留意']) assert.ok(prompt.includes(tag));
 });
 
+test("extractPrompt numbers posts across batches and parseClaims drops what it cannot trust", () => {
+  const post = { id: 'p', code: 'c', user: 'a', caption: 'x', alt: '', type: 'post', takenAt: 0, pic: '', thumb: '' } as C.Post;
+  assert.match(C.extractPrompt([post], [61], 'zh', '商業'), /\[61\] @a: x/);
+  assert.deepEqual(C.parseClaims({ claims: [{ n: 1, kind: 'event', text: ' 講座 ' }, { n: 9, text: '超出範圍' }, { n: 2, text: '' }, { n: 2, kind: 'odd', text: '好' }] }, 3),
+    [{ n: 1, kind: 'event', text: '講座' }, { n: 2, kind: 'principle', text: '好' }]);
+});
+
+test("missedPosts finds posts with real text and no claim, and skips near-empty ones", () => {
+  const post = (caption: string) => ({ id: caption, code: 'c', user: 'a', caption, alt: '', type: 'post', takenAt: 0, pic: '', thumb: '' }) as C.Post;
+  const long = '這則貼文有足夠的內容可以拆解出一個觀點，不應該被模型略過才對喔';
+  assert.deepEqual(C.missedPosts([post(long), post('#短'), post(long + '2')], [{ n: 1, kind: 'principle', text: '有' }]), [3]);
+});
+
+test("claims keep who said it, and the editor sees it", () => {
+  const [c] = C.parseClaims({ claims: [{ n: 1, kind: 'principle', who: ' Naval ', text: '判斷力' }] }, 1);
+  assert.equal(c.who, 'Naval');
+  assert.ok(C.editPrompt('商業', [c], 'zh', '2026-11-24').includes('[1] (principle, who: Naval) 判斷力'));
+});
+
+test("leftOver returns ideas from posts the note never cites, with who said them", () => {
+  const note = { thesis: 't', chapters: [{ claim: 'c', points: [{ text: 'p', sources: [1] }] }], tensions: [], actions: [], resources: [{ text: 'r', sources: [2] }], thin: 0 };
+  const claims: C.Claim[] = [{ n: 1, kind: 'principle', text: '已用' }, { n: 2, kind: 'event', text: '講座' }, { n: 3, kind: 'case', who: 'Naval', text: '槓桿' }];
+  assert.deepEqual(C.leftOver(note, claims), [{ text: 'Naval：槓桿', sources: [3], kind: 'case' }]);
+});
+
+test("isPast reads common date formats and leaves undated text alone", () => {
+  assert.equal(C.isPast('講座 2026年5月30日 14:00', '2026-11-24'), true);
+  assert.equal(C.isPast('講座 2026/12/1', '2026-11-24'), false);
+  assert.equal(C.isPast('2026-11-24 當天', '2026-11-24'), false);
+  assert.equal(C.isPast('5 月 30 日，免費課程', '2026-11-24'), false);
+});
+
+test("skipped posts group by reason, and a post that gave a claim is not listed", () => {
+  const skipped = C.parseSkipped({ skipped: [{ n: 1, why: 'teaser' }, { n: 2, why: 'promo' }, { n: 2, why: 'promo' }, { n: 3, why: 'teaser' }, { n: 9, why: 'teaser' }, { n: 1, why: 'odd' }] }, 3);
+  assert.deepEqual(C.groupSkipped(skipped, [{ n: 3, kind: 'principle', text: '有內容' }]), { teaser: [1], promo: [2] });
+  const post = { id: 'p', code: 'c', user: 'a', caption: '這則貼文有足夠的內容可以拆解出一個觀點，不應該被模型略過才對喔', alt: '', type: 'post', takenAt: 0, pic: '', thumb: '' } as C.Post;
+  assert.deepEqual(C.missedPosts([post, post], [{ n: 1 }]), [2]);
+});
+
+test("a post labelled twice is listed once, under the later label", () => {
+  assert.deepEqual(C.groupSkipped([{ n: 15, why: 'teaser' }, { n: 15, why: 'promo' }], []), { promo: [15] });
+});
+
+test("the editor is not told to hit a citation quota", () => {
+  assert.ok(!C.editPrompt('商業', [{ n: 1, kind: 'principle', text: '先刪減' }], 'zh', '2026-11-24').includes('cite at least'));
+});
+
+test("a framework keeps its steps through parsing and plain text", () => {
+  const note = C.parseNote({ thesis: 't', chapters: [{ claim: 'c', points: [{ text: '五步', sources: [1], steps: ['確認', ' ', '刪減'] }] }] }, 1, 0)!;
+  assert.deepEqual(note.chapters[0].points[0].steps, ['確認', '刪減']);
+  assert.ok(C.noteToText(note).includes('   2. 刪減'));
+});
+
+test("a framework's lead-in drops the steps the list already shows", () => {
+  const intro = (text: string, steps: string[]) => C.parseNote({ thesis: 't', chapters: [{ claim: 'c', points: [{ text, sources: [1], steps }] }] }, 1, 0)!.chapters[0].points[0].text;
+  assert.equal(intro('馬斯克工作流 5 步驟：Step 1：確認方向，找出本質；Step 2：做減法，砍掉零件', ['確認方向，找出本質', '做減法，砍掉零件']), '馬斯克工作流 5 步驟');
+  assert.equal(intro('使用 PAIPS 公式製作爆款內容，結構包含 P-Pain、A-Agitate', ['P-Pain：講出痛點', 'A-Agitate：把刀轉一轉']), '使用 PAIPS 公式製作爆款內容');
+  assert.equal(intro('開場三步', ['說出處境', '丟反差']), '開場三步');
+});
+
+test("the prompts keep one-line opinions and refuse leverage promises", () => {
+  const post = { id: 'p', code: 'c', user: 'a', caption: 'x', alt: '', type: 'post', takenAt: 0, pic: '', thumb: '' } as C.Post;
+  assert.ok(C.extractPrompt([post], [1], 'zh', '商業').includes('make it a claim'));
+  assert.ok(C.editPrompt('商業', [], 'zh', '2026-11-24').includes('loans or leverage'));
+});
+
+test("a long caption called a teaser is asked about again, a short one is not", () => {
+  const post = (caption: string) => ({ id: caption, code: 'c', user: 'a', caption, alt: '', type: 'post', takenAt: 0, pic: '', thumb: '' }) as C.Post;
+  const posts = [post('馬斯克'.repeat(50)), post('看影片學三招，這支一定要存起來喔，不然會後悔的啦 #商業 #創業'), post('#商業'.repeat(40))];
+  assert.deepEqual(C.missedPosts(posts, [{ n: 1, why: 'teaser' }, { n: 2, why: 'teaser' }, { n: 3, why: 'teaser' }]), [1]);
+});
+
+test("noteProblems flags too many chapters and one-point chapters", () => {
+  const ch = (claim: string, n: number) => ({ claim, points: Array.from({ length: n }, (_, j) => ({ text: 'p', sources: [j + 1] })) });
+  const note = (chapters: C.EditedNote['chapters']): C.EditedNote => ({ thesis: 't', chapters, tensions: [], actions: [], resources: [], thin: 0 });
+  assert.deepEqual(C.noteProblems(note([ch('a', 2), ch('b', 3)])), []);
+  assert.equal(C.noteProblems(note([ch('a', 2), ch('孤單', 1)])).length, 1);
+  assert.equal(C.noteProblems(note(Array.from({ length: 7 }, (_, i) => ch('c' + i, 2)))).length, 1);
+  assert.equal(C.noteProblems(note([ch('主動行動並設好界線', 2)])).length, 1);
+  assert.deepEqual(C.noteProblems(note([ch('壓力並非來自外部', 2)])), []);
+  const sameSource = { claim: '切入話題', points: [1, 2, 3].map(() => ({ text: 'p', sources: [4] })) };
+  assert.equal(C.noteProblems(note([sameSource])).length, 1);
+});
+
+test("isRisky catches loan-based plans and leaves ordinary leverage talk alone", () => {
+  const post = (caption: string) => ({ caption, alt: '' }) as C.Post;
+  assert.equal(C.isRisky(post('七年計畫 #信貸 #質押 #買借死')), true);
+  assert.equal(C.isRisky(post('Naval 談槓桿思維')), false);
+});
+
+test("parseNote keeps only sourced points and refuses a note with no thesis or chapters", () => {
+  const note = C.parseNote({
+    thesis: '先選對問題',
+    chapters: [{ claim: '刪掉不該存在的事', points: [{ text: '先刪減', sources: [1, 1, 99], kind: 'principle' }, { text: '沒有來源', sources: [] }] }, { claim: '空章節', points: [] }],
+    tensions: [{ a: { text: '快', sources: [1] }, b: { text: '慢', sources: [] } }],
+    actions: ['刪一件事', 3],
+    resources: [{ text: '講座', sources: [2], expired: true }],
+  }, 2, 1)!;
+  assert.deepEqual(note.chapters, [{ claim: '刪掉不該存在的事', points: [{ text: '先刪減', sources: [1], kind: 'principle' }] }]);
+  assert.deepEqual(note.tensions, []);
+  assert.deepEqual(note.actions, ['刪一件事']);
+  assert.deepEqual(note.resources, [{ text: '講座', sources: [2] }]);
+  assert.match(C.noteToText(note), /先選對問題[\s\S]*• 先刪減 \[1\]/);
+  assert.equal(C.parseNote({ thesis: '', chapters: [] }, 2, 0), null);
+});
+
+test("editPrompt asks for a position, idea-based chapters and today's date", () => {
+  const prompt = C.editPrompt('商業', [{ n: 1, kind: 'principle', text: '先刪減' }], 'zh', '2026-11-24', ['收斂'], '');
+  assert.match(prompt, /Today is 2026-11-24/);
+  assert.match(prompt, /never by person/);
+  assert.match(prompt, /\[1\] \(principle\) 先刪減/);
+  assert.match(prompt, /- 收斂/);
+});
+
 test("digestLines leaves a long sentence with a colon as body, not a lead", () => {
   const [l] = C.digestLines('• 這是一個很長很長的句子，裡面剛好也有冒號出現在後面：然後繼續 [1]');
   assert.equal(l.lead, undefined);

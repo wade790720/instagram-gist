@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowRotateLeft, Bulb, ChevronRight, Compass, ListCheck, Sparkles, TrashBin, TriangleExclamation } from '@gravity-ui/icons';
 import * as Core from '@/core';
 import type { Digest } from '@/core';
-import { branchDigest, createDigest, deleteDigest, reviseDigest, undoDigest } from '@/lib/actions';
+import { branchDigest, createDigest, deleteDigest, editDigest, reviseDigest, undoDigest } from '@/lib/actions';
 import { t } from '@/lib/i18n';
 import { db, emit, ui } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -46,6 +46,90 @@ function DigestText({ d }: { d: Digest }) {
   );
 }
 
+function Point({ p, d }: { p: Core.NotePoint; d: Digest }) {
+  const single = p.sources.length === 1 && (p.kind === 'case' || p.kind === 'data');
+  return (
+    <>
+      <WithSources text={Core.citedText(p)} d={d} />
+      {p.sources.length >= 3 && <span className="note-count">{t('noteMany', p.sources.length)}</span>}
+      {single && <span className="note-count">{t('noteSingle')}</span>}
+    </>
+  );
+}
+
+function NoteBlock({ tone, Icon, title, children }: { tone: Core.DigestTone; Icon: typeof Bulb; title: string; children: React.ReactNode }) {
+  return (
+    <section data-tone={tone} className="digest-line note-block">
+      <h4 className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--tone-text)]"><Icon aria-hidden className="size-3.5" />{title}</h4>
+      {children}
+    </section>
+  );
+}
+
+const SKIP_LABEL: Record<Core.SkipWhy, string> = { teaser: 'skipTeaser', promo: 'skipPromo', offtopic: 'skipOfftopic', risky: 'skipRisky' };
+
+function EditedNoteView({ d, note }: { d: Digest; note: Core.EditedNote }) {
+  return (
+    <article className="flex max-w-[42em] flex-col gap-7 text-base leading-[1.8] text-foreground/90">
+      <header>
+        <p className="mb-1 text-xs font-medium text-[var(--tone-key-text)]">{t('noteThesis')}</p>
+        <p className="text-lg leading-[1.55] font-semibold text-foreground">{note.thesis}</p>
+      </header>
+      {note.chapters.map((c, k) => (
+        <section key={k}>
+          <h3 className="flex gap-2.5 font-semibold text-foreground"><span aria-hidden className="text-[var(--tone-method-text)] tabular-nums">{k + 1}</span>{c.claim}</h3>
+          <ul className="mt-2 flex flex-col gap-1.5 ps-[1.15rem]">
+            {c.points.map((p, j) => <li key={j} className="note-point"><Point p={p} d={d} />{p.steps && <ol className="mt-1 mb-1 flex list-decimal flex-col gap-0.5 ps-5 text-sm text-text-secondary">{p.steps.map((s, m) => <li key={m}>{s}</li>)}</ol>}</li>)}
+          </ul>
+        </section>
+      ))}
+      {note.tensions.length > 0 && (
+        <NoteBlock tone="caution" Icon={TriangleExclamation} title={t('noteTensions')}>
+          <div className="flex flex-col gap-3 text-sm">
+            {note.tensions.map((x, k) => <div key={k} className="grid gap-1 sm:grid-cols-2 sm:gap-4"><p><Point p={x.a} d={d} /></p><p><Point p={x.b} d={d} /></p></div>)}
+          </div>
+        </NoteBlock>
+      )}
+      {note.actions.length > 0 && (
+        <NoteBlock tone="action" Icon={ListCheck} title={t('noteActions')}>
+          <ul className="flex flex-col gap-1 ps-[1.15rem] text-sm">{note.actions.map((a, k) => <li key={k} className="note-point">{a}</li>)}</ul>
+        </NoteBlock>
+      )}
+      {note.resources.length > 0 && (
+        <section>
+          <h4 className="mb-1.5 text-xs font-medium text-muted-foreground">{t('noteResources')}</h4>
+          <ul className="flex flex-col gap-1 text-sm text-text-secondary">
+            {note.resources.map((r, k) => {
+              const past = Core.isPast(r.text, new Date().toISOString().slice(0, 10));
+              return <li key={k} className={cn(past && 'text-muted-foreground')}><WithSources text={Core.citedText(r)} d={d} />{past && <span className="note-count">{t('noteExpired')}</span>}</li>;
+            })}
+          </ul>
+        </section>
+      )}
+      {!!note.rest?.length && (
+        <details className="text-sm text-text-secondary">
+          <summary className="text-xs font-medium text-muted-foreground hover:text-foreground">{t('noteRest', note.rest.length)}</summary>
+          <ul className="mt-2 flex flex-col gap-1 ps-[1.15rem]">{note.rest.map((p, k) => <li key={k} className="note-point"><Point p={p} d={d} /></li>)}</ul>
+        </details>
+      )}
+      {Object.values(note.skipped ?? {}).some(ns => ns.length) && (
+        <details className="text-sm text-text-secondary">
+          <summary className="text-xs font-medium text-muted-foreground hover:text-foreground">{t('noteSkipped', Object.values(note.skipped!).flat().length)}</summary>
+          <dl className="mt-2 flex flex-col gap-2">
+            {(['teaser', 'promo', 'offtopic', 'risky'] as const).map(why => !!note.skipped![why]?.length && (
+              <div key={why}>
+                <dt className="text-xs text-muted-foreground">{t(SKIP_LABEL[why])}</dt>
+                <dd><WithSources text={note.skipped![why]!.map(n => `[${n}]`).join('')} d={d} /></dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
+      {note.thin > 0 && <p className="text-xs text-muted-foreground">{t('noteThin', note.thin)}</p>}
+    </article>
+  );
+}
+
 export function TopicDigests({ cat }: { cat: string }) {
   const list = db.summaries[cat] || [];
   if (!list.length) return (
@@ -75,7 +159,7 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="border-t px-6 pt-5 pb-5">
-          <DigestText d={d} />
+          {d.edited ? <EditedNoteView d={d} note={d.edited} /> : <DigestText d={d} />}
           {!!d.notes?.length && <p className="mt-5 text-xs text-muted-foreground">{t('notesApplied', d.notes.join('；'))}</p>}
           <form className="mt-6 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); send(reviseDigest); }}>
             <Input value={note} onChange={e => setNote(e.target.value)} placeholder={t('refinePlaceholder')} aria-label={t('refine')} className="min-w-0 flex-1 basis-60" />
@@ -86,6 +170,7 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
             {fresh
               ? <Button size="sm" variant="secondary" disabled={ui.busy} onClick={() => reviseDigest(cat, i)}><Sparkles />{t('updateSummary', fresh)}</Button>
               : <span className="px-1 text-xs text-muted-foreground">{t('upToDate')}</span>}
+            {!d.edited && <Button size="sm" variant="secondary" disabled={ui.busy} onClick={() => editDigest(cat, i)}><Sparkles />{t('makeNote')}</Button>}
             <span className="flex-1" />
             {d.prev && <Button size="sm" variant="ghost" disabled={ui.busy} onClick={() => undoDigest(cat, i)}><ArrowRotateLeft />{t('undo')}</Button>}
             <Button size="sm" variant="ghost" disabled={ui.busy} onClick={() => deleteDigest(cat, i)} className="text-destructive hover:text-destructive"><TrashBin />{t('deleteDigest')}</Button>

@@ -11,6 +11,7 @@ const DAY = 864e5;
 const FOLLOWS_PER_CALL = 400;
 const POSTS_PER_CALL = 150;
 const FRIEND_CHECKS_PER_CALL = 40;
+const POSTS_PER_EXTRACT = 60;
 
 // Stops an action to tell the user something that is not a failure, so it is shown without the error prefix.
 
@@ -167,9 +168,61 @@ async function draft(cat: string, old: Digest | undefined, notes: string[]) {
   return { text, sourceIds: posts.map(p => p.id), notes, at: Date.now() };
 }
 
+/** Editor pipeline: pull separate ideas from the posts, then merge and edit them into one note. */
+async function draftNote(cat: string, old: Digest | undefined, notes: string[]) {
+  const posts = Core.orderSources(old?.sourceIds || [], db.saved.filter(x => x.cat === cat));
+  const claims: Core.Claim[] = [];
+  const skipped: Core.Skipped[] = [];
+  const extract = async (numbers: number[], retry = false) => {
+    for (let i = 0; i < numbers.length; i += POSTS_PER_EXTRACT) {
+      ui.progress = i / numbers.length;
+      status(t('notePulling', i, numbers.length));
+      const batch = numbers.slice(i, i + POSTS_PER_EXTRACT);
+      const prompt = Core.extractPrompt(batch.map(n => posts[n - 1]), batch, db.settings.lang, cat, retry);
+      const answer = Core.parseJson(await gemini(prompt, true, db.settings.model));
+      claims.push(...Core.parseClaims(answer, posts.length));
+      skipped.push(...Core.parseSkipped(answer, posts.length));
+    }
+  };
+  await extract(posts.map((_, i) => i + 1));
+  await extract(Core.missedPosts(posts, [...claims, ...skipped]), true);
+  const safe = claims.filter(c => !Core.isRisky(posts[c.n - 1]));
+  for (const c of claims) if (Core.isRisky(posts[c.n - 1])) skipped.push({ n: c.n, why: 'risky' });
+  if (!safe.length) throw new Notice(t('noteNoContent'));
+  ui.progress = 'busy';
+  status(t('noteEditing'));
+  const thin = posts.length - new Set([...claims, ...skipped].map(c => c.n)).size;
+  const prompt = Core.editPrompt(cat, safe, db.settings.lang, new Date().toISOString().slice(0, 10), notes, old?.edited ? old.text : '');
+  let edited: Core.EditedNote | null = null;
+  for (let tries = 0; tries < 2 && !edited; tries++) {
+    edited = Core.parseNote(Core.parseJson(await gemini(prompt, true, db.settings.summaryModel)), posts.length, thin);
+  }
+  if (!edited) throw new Error(t('digestEmpty'));
+  const problems = Core.noteProblems(edited);
+  if (problems.length) {
+    const fix = `${prompt}\n\nYour draft broke these rules. Return the full corrected JSON:\n${problems.map(p => `- ${p}`).join('\n')}\n\nDraft:\n${JSON.stringify(edited)}`;
+    // The draft is already usable, so a failed fix keeps it instead of losing the whole note.
+    const fixed = Core.parseNote(Core.parseJson(await gemini(fix, true, db.settings.summaryModel).catch(() => '')), posts.length, thin);
+    if (fixed && Core.noteProblems(fixed).length < problems.length) edited = fixed;
+  }
+  edited.rest = Core.leftOver(edited, safe);
+  edited.skipped = Core.groupSkipped(skipped, safe);
+  return { text: Core.noteToText(edited), edited, sourceIds: posts.map(p => p.id), notes, at: Date.now() };
+}
+
+/** A new edited note next to digest i, so the two can be compared. Digest i stays as it is. */
+export const editDigest = (cat: string, i: number) => run(async () => {
+  const list = db.summaries[cat];
+  const next: Digest = { ...(await draftNote(cat, undefined, list[i].notes || [])), id: Date.now().toString(36), title: t('noteTitle') };
+  list.push(next);
+  ui.opened.add(cat + '#' + next.id);
+  await save();
+  status('');
+});
+
 /** The topic's first digest, in slot 0. */
 export const createDigest = (cat: string) => run(async () => {
-  const next: Digest = { id: Date.now().toString(36), ...(await draft(cat, undefined, [])) };
+  const next: Digest = { id: Date.now().toString(36), ...(await draftNote(cat, undefined, [])) };
   (db.summaries[cat] ||= [])[0] = next;
   await save();
   status('');
@@ -179,7 +232,8 @@ export const createDigest = (cat: string) => run(async () => {
 export const reviseDigest = (cat: string, i: number, note = '') => run(async () => {
   const list = db.summaries[cat];
   const old = list[i];
-  const next = await draft(cat, old, [...(old.notes || []), note.trim()].filter(Boolean));
+  const notes = [...(old.notes || []), note.trim()].filter(Boolean);
+  const next = await (old.edited ? draftNote : draft)(cat, old, notes);
   // ponytail: one level of undo (prev); keep a list if people want to step back further.
   const { prev: _, ...undo } = old;
   list[i] = { ...next, id: old.id, title: old.title, prev: undo };
@@ -190,7 +244,7 @@ export const reviseDigest = (cat: string, i: number, note = '') => run(async () 
 /** A new digest built from digest i and titled by the instruction; digest i stays as it is. */
 export const branchDigest = (cat: string, i: number, note: string) => run(async () => {
   const list = db.summaries[cat];
-  const next: Digest = { ...(await draft(cat, list[i], [note.trim()])), id: Date.now().toString(36), title: note.trim() };
+  const next: Digest = { ...(await (list[i].edited ? draftNote : draft)(cat, list[i], [note.trim()])), id: Date.now().toString(36), title: note.trim() };
   list.push(next);
   ui.opened.add(cat + '#' + next.id);
   await save();

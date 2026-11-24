@@ -223,3 +223,11 @@
   border-radius: 0.375rem; vertical-align: 0.1em; font-size: var(--text-xs); line-height: 1; font-weight: 500;
   color: var(--tone-text); background: color-mix(in oklab, var(--tone) 16%, var(--card));
 }
+
+.note-block { padding: 0.875rem 1rem; border-radius: var(--radius-lg); background: color-mix(in oklab, var(--tone) 9%, var(--card)); }
+.note-point { position: relative; }
+.note-point::before {
+  content: ""; position: absolute; inset-inline-start: -1rem; top: 0.72em; width: 0.3125rem; height: 0.3125rem;
+  border-radius: 9999px; background: var(--tone, var(--muted-foreground));
+}
+.note-count { margin-inline-start: 0.375rem; font-size: 0.75rem; color: var(--muted-foreground); white-space: nowrap; }
