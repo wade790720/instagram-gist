@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- Chrome Web Store screenshot frame (1280x800): headline, orb icon, app shot. Filled by store-shots.mjs through ?title=&orb=&shot=. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: InterV; src: url("../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 1280px; height: 800px; overflow: hidden; font-family: InterV, "Segoe UI", sans-serif;
+    background: repeating-radial-gradient(circle at 50% 118%, transparent 0 118px, rgb(0 0 0 / .025) 118px 120px), #eef0f5; }
+  .card { position: absolute; left: 96px; top: 64px; width: 1088px; height: 656px; border-radius: 32px; overflow: hidden;
+    background: rgb(255 255 255 / .55); border: 1px solid rgb(255 255 255 / .9); box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 24px 60px rgb(40 40 80 / .08); }
+  h1 { position: absolute; left: 64px; top: 56px; margin: 0; width: 760px; font-size: 54px; line-height: 1.12; font-weight: 800; letter-spacing: -0.025em; color: #2a2d3e; }
+  .orb { position: absolute; right: 56px; top: 48px; width: 84px; height: 84px; }
+  .shot { position: absolute; left: 50%; top: 248px; transform: translateX(-50%); width: 920px; border-radius: 14px 14px 0 0;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / .06), 0 20px 50px rgb(40 40 80 / .14); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1 id="t"></h1>
+    <img class="orb" id="o" alt="">
+    <img class="shot" id="s" alt="">
+  </div>
+  <script>
+    const q = new URLSearchParams(location.search);
+    document.getElementById('t').innerHTML = q.get('title');
+    document.getElementById('o').src = q.get('orb');
+    document.getElementById('s').src = q.get('shot');
+  </script>
+</body>
+</html>

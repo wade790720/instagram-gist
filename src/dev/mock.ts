@@ -1,8 +1,13 @@
 import zh from '../../public/_locales/zh_TW/messages.json';
+import en from '../../public/_locales/en/messages.json';
 import { putCover } from '@/lib/thumbs';
 
-const msgs = zh as Record<string, { message: string }>;
-const cats = ['好友', '行銷商業', '科技資訊', '藝術設計', '攝影剪輯', '生活休閒', '音樂影視'];
+// ?lang=en previews the English UI with English sample data (used by scripts/store-shots.mjs).
+const english = new URLSearchParams(globalThis.location?.search).get('lang') === 'en'; // tests run in Node: no location
+const msgs = (english ? en : zh) as Record<string, { message: string }>;
+const cats = english
+  ? ['Friends', 'Marketing', 'Tech', 'Design', 'Photography', 'Lifestyle', 'Music']
+  : ['好友', '行銷商業', '科技資訊', '藝術設計', '攝影剪輯', '生活休閒', '音樂影視'];
 const names = ['angiewong_98', 'pb_design_lab', 'aiposthub', 'kevin_learn', 'plantica_jp', 'jessie.chu51', 'harryspeaks_', 'tenten.co', 'maxstudio.biz', 'growithfyn', 'olga.passione', 'joshuavermillion'];
 const following = Array.from({ length: 48 }, (_, i) => ({
   id: String(i), username: names[i % names.length] + (i >= names.length ? i : ''), name: ['Angie Wong', '設計實驗室｜AI × 設計', 'AI郵報', '凱文設計 Kevin', 'plantica', '朱德淮'][i % 6],
@@ -10,7 +15,9 @@ const following = Array.from({ length: 48 }, (_, i) => ({
 }));
 const saved = Array.from({ length: 24 }, (_, i) => ({
   id: 's' + i, code: 'C' + i, user: names[i % names.length], type: (['image', 'video', 'carousel'] as const)[i % 3], takenAt: 0, pic: '',
-  caption: ['留言「LEARN」，我把整份資源發給你。看完先存起來，下次卡關時會用到。', '這七個指令讓 Claude 進入創辦人模式：從市場、槓桿、流量、系統等方向思考。', '銷售 = 痛點情境 + 解決方案。三個真實案例拆解。'][i % 3],
+  caption: (english
+    ? ['Comment "LEARN" and I will send you the full guide. Save this for the next time you get stuck.', 'Seven prompts that make your assistant think like a founder: market, leverage, traffic, systems.', 'Sales = pain point + solution. Three real examples, broken down.']
+    : ['留言「LEARN」，我把整份資源發給你。看完先存起來，下次卡關時會用到。', '這七個指令讓 Claude 進入創辦人模式：從市場、槓桿、流量、系統等方向思考。', '銷售 = 痛點情境 + 解決方案。三個真實案例拆解。'])[i % 3],
   alt: '', cat: cats[(i % 4) + 1],
   ...(i % 7 === 6 ? { thumb: '' } : { thumb: 'mock', w: 1080, h: [1350, 1080, 1920, 1440][i % 4] }),
 }));
@@ -36,7 +43,7 @@ const avatars = Object.fromEntries([...names].map((n, i) => [n, `data:image/svg+
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="oklch(0.72 0.12 ${(i * 47) % 360})"/><text x="20" y="26" font-size="16" text-anchor="middle" fill="white" font-family="sans-serif">${n[0].toUpperCase()}</text></svg>`)}`]));
 let store: Record<string, unknown> = {
   following, saved, summaries, avatars,
-  settings: { apiKey: 'dev', lang: 'zh' },
+  settings: { apiKey: 'dev', lang: english ? 'en' : 'zh' },
   lastSync: { saved: Date.now() - 36e5, following: Date.now() - 864e5 },
 };
 
@@ -44,7 +51,7 @@ Object.assign(globalThis, {
   chrome: {
     i18n: {
       getMessage: (k: string, a: string[] = []) => (msgs[k]?.message || '').replace(/\$(\d)/g, (_, i) => a[i - 1] ?? ''),
-      getUILanguage: () => 'zh-TW',
+      getUILanguage: () => (english ? 'en' : 'zh-TW'),
     },
     storage: {
       local: {
