@@ -88,7 +88,7 @@ const TIER_LABEL: Record<ModelTier, string> = { quality: 'tierQuality', balanced
 
 function Pill({ strong, children }: { strong?: boolean; children: React.ReactNode }) {
   // The trigger echoes the item's text; the field is too narrow for tags there.
-  return <span className={cn('rounded-full px-1.5 text-xs leading-5 in-data-[slot=select-trigger]:hidden', strong ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>{children}</span>;
+  return <span className={cn('rounded-[0.375rem] px-1.5 text-xs leading-5 in-data-[slot=select-trigger]:hidden', strong ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>{children}</span>;
 }
 
 function Panel({ title, help, footer, children }: { title: string; help: string; footer?: React.ReactNode; children: React.ReactNode }) {

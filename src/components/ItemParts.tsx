@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Check, ChevronDown, Plus } from '@gravity-ui/icons';
 import type { Item } from '@/core';
 import { moveItem } from '@/lib/actions';
@@ -12,8 +12,12 @@ export function Avatar({ name, className }: { name: string; className?: string }
   const src = avatars[name];
   return src
     ? <img src={src} alt="" className={cn('size-7 shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10', className)} />
-    : <span aria-hidden className={cn('grid size-7 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium text-muted-foreground uppercase', className)}>{name.slice(0, 1)}</span>;
+    : <span aria-hidden style={{ '--avatar-hue': hue(name) } as CSSProperties}
+        className={cn('avatar-letter grid size-7 shrink-0 place-items-center rounded-full text-xs font-medium uppercase', className)}>{name.slice(0, 1)}</span>;
 }
+
+// 同名同色，和創作者精選的 CreatorSwitcher 同一條公式
+const hue = (s: string) => (40 + [...s].reduce((h, c) => (h * 31 + c.codePointAt(0)!) % 330, 7)) % 360;
 
 // modal={false}: a modal menu that opens a dialog ("New topic…") can leave the page unclickable.
 export function TopicPicker({ x, cats, overlay, className }: { x: Item; cats: string[]; overlay?: boolean; className?: string }) {

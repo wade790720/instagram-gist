@@ -21,7 +21,7 @@ function WithSources({ text, d }: { text: string; d: Digest }) {
     const p = n ? db.saved.find(x => x.id === d.sourceIds[Number(n) - 1]) : undefined;
     return p
       ? <a key={k} href={postUrl(p.code)} target="_blank" rel="noreferrer" aria-label={t('openSource', part, p.user)}
-          className="mx-px inline-flex h-[1.45em] min-w-[1.45em] items-center justify-center rounded-md bg-primary/10 px-1 align-[0.1em] text-[0.7em] leading-none font-medium text-primary-text tabular-nums transition-[background-color,scale] duration-150 hover:bg-primary/20 active:scale-90">{n}</a>
+          className="md-cite">{n}</a>
       : part;
   });
 }
@@ -154,7 +154,7 @@ function DigestCard({ cat, i, d }: { cat: string; i: number; d: Digest }) {
       <CollapsibleTrigger className="flex min-h-13 w-full items-center gap-2.5 rounded-xl px-4 text-left transition-colors duration-[120ms] ease-[var(--ease-ui)] hover:bg-row-hover group-data-[state=open]/d:rounded-b-none">
         <ChevronRight className="size-4 text-muted-foreground group-data-[state=open]/d:rotate-90" />
         <span className="min-w-0 flex-1 py-3 font-medium">{d.title ? `${cat} · ${d.title}` : t('digestTitle', cat, d.sourceIds.length)}</span>
-        {fresh > 0 && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary-text tabular-nums">+{fresh}</span>}
+        {fresh > 0 && <span className="rounded-[0.375rem] bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary-text tabular-nums">+{fresh}</span>}
         <span className="text-xs text-muted-foreground tabular-nums">{t('sources', d.sourceIds.length)}</span>
       </CollapsibleTrigger>
       <CollapsibleContent>

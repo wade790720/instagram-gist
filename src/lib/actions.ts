@@ -1,5 +1,6 @@
 import * as Core from '@/core';
 import type { Digest, Item, Lang, Post, User } from '@/core';
+import { toast } from 'sonner';
 import { record } from './error-log';
 import { gemini, Notice } from './gemini';
 import { t, when } from './i18n';
@@ -17,16 +18,18 @@ const POSTS_PER_EXTRACT = 60;
 
 export async function run(fn: () => Promise<void>) {
   if (ui.busy) return;
-  Object.assign(ui, { busy: true, progress: 'busy' });
+  Object.assign(ui, { busy: true, progress: 'busy', status: '' });
   emit();
+  // 狀態列只顯示進度；結果用 toast 回報，結束後狀態列回到上次同步時間
   try {
     await fn();
+    if (ui.status) toast(ui.status);
   } catch (e) {
-    if (e instanceof Notice) { status(e.message, e.alert); return; }
-    status(t('error', (e as Error).message), true);
+    if (e instanceof Notice) { if (e.alert) toast.error(e.message, { duration: 10000 }); else toast(e.message); return; }
+    toast.error(t('error', (e as Error).message), { duration: 10000 });
     void record(e, 'action').catch(() => {});
   }
-  finally { Object.assign(ui, { busy: false, progress: null }); emit(); }
+  finally { Object.assign(ui, { busy: false, progress: null, status: idleStatus(), err: false }); emit(); }
 }
 
 export const sync = () => run(async () => {
@@ -301,8 +304,8 @@ export async function saveSettings(s: typeof db.settings) {
     summaryModel: s.summaryModel.trim() || DEFAULTS.summaryModel, lang: s.lang,
   });
   await save();
-  status(t('saved'));
-  if (db.settings.apiKey) run(async () => { await categorize(); status(t('saved')); });
+  toast(t('saved'));
+  if (db.settings.apiKey) run(async () => { await categorize(); status(''); });
 }
 
 export const resortAll = async () => {
@@ -369,12 +372,14 @@ export function upgrade(s: Stored, lang: Lang): DB {
   };
 }
 
+const idleStatus = () => t('lastSync', when(db.lastSync.saved), when(db.lastSync.following));
+
 export async function load() {
   const { avatars: stored, ...rest } = (await chrome.storage.local.get(null)) as Stored & { avatars?: Record<string, string> };
   Object.assign(avatars, stored);
   const own: Stored = {};
   for (const k of DB_KEYS) if (k in rest) Object.assign(own, { [k]: rest[k] });
   Object.assign(db, upgrade(own, uiLang()));
-  ui.status = t('lastSync', when(db.lastSync.saved), when(db.lastSync.following));
+  ui.status = idleStatus();
 }
 

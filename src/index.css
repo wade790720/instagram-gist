@@ -220,9 +220,22 @@
 .digest-line[data-tone="caution"] { --tone: var(--tone-caution); --tone-text: var(--tone-caution-text); }
 .digest-tag {
   display: inline-flex; align-items: center; gap: 0.25rem; height: 1.375rem; margin-inline-end: 0.5rem; padding-inline: 0.4375rem;
-  border-radius: 0.375rem; vertical-align: 0.1em; font-size: var(--text-xs); line-height: 1; font-weight: 500;
+  border-radius: 0.375rem; vertical-align: 0.1em; font-size: var(--text-xs); font-weight: 500; line-height: 1; white-space: nowrap;
   color: var(--tone-text); background: color-mix(in oklab, var(--tone) 16%, var(--card));
 }
+
+.avatar-letter { background: oklch(0.9 0.04 var(--avatar-hue)); color: oklch(0.38 0.08 var(--avatar-hue)); }
+.dark .avatar-letter { background: oklch(0.3 0.05 var(--avatar-hue)); color: oklch(0.86 0.07 var(--avatar-hue)); }
+
+/* 引用編號：和創作者精選的 .md-cite 同一份 */
+.md-cite {
+  display: inline-flex; align-items: center; justify-content: center; height: 1.45em; min-width: 1.45em; margin-inline: 1px; padding-inline: 0.25rem;
+  border-radius: 0.3125rem; background: var(--row-active); color: var(--text-secondary);
+  font-size: 0.75rem; font-weight: 500; line-height: 1; vertical-align: 0.1em; text-decoration: none; font-variant-numeric: tabular-nums;
+  transition: background-color 120ms var(--ease-ui), color 120ms var(--ease-ui), scale 120ms var(--ease-ui);
+}
+@media (hover: hover) { .md-cite:hover { background: color-mix(in oklab, var(--tone, var(--primary)) 28%, transparent); color: var(--foreground); } }
+.md-cite:active { scale: 0.98; transition-duration: 60ms; }
 
 .note-block { padding: 0.875rem 1rem; border-radius: var(--radius-lg); background: color-mix(in oklab, var(--tone) 9%, var(--card)); }
 .note-point { position: relative; }

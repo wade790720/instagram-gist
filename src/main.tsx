@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Toaster } from '@/components/ui/sonner';
 import './index.css';
 import { captureErrors } from './lib/error-log';
 import { load } from './lib/actions';
@@ -16,4 +17,4 @@ dark.addEventListener('change', applyTheme);
 document.documentElement.lang = chrome.i18n.getUILanguage();
 
 await load();
-createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode><App /><Toaster /></StrictMode>);
