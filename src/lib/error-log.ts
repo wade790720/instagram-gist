@@ -2,6 +2,7 @@
 // (router.tekuei.com), where a daily AI routine picks them up. Sending is on by default; the member
 // can turn it off in settings (ReportProblem).
 // The same file lives in instagram-gist, jev-model-router and brand-digest-extension: change all three.
+// instagram-gist is ahead: sendReport() replaces the emailed report. Bring the other two up to it.
 // Stores and sends no user content: URLs lose their query (API keys travel there), long tokens are
 // masked, messages are cut to 200 characters. The inbox repeats these rules.
 const KEY = 'errorLog';
@@ -45,6 +46,14 @@ function send(entries: ErrorEntry[]) {
   // A plain string body is a CORS "simple request": no preflight and no extra host permission.
   // The reply is opaque and not needed. Never log a failure here: console.error feeds record().
   fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', body }).catch(() => {});
+}
+
+/** The member pressed "Report a problem": send the recent log now, even with automatic sending off. False if the network refused. */
+export async function sendReport() {
+  if (import.meta.env.DEV) return true;
+  const entries = (await load()).slice(-10).map(({ message, where }) => ({ message, where }));
+  const body = JSON.stringify({ ...meta(), entries: entries.length ? entries : [{ message: 'Manual report, no errors recorded', where: 'report' }] });
+  return fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', body }).then(() => true, () => false);
 }
 
 export async function record(error: unknown, where = 'page') {

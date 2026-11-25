@@ -1,36 +1,32 @@
 import { useEffect, useState } from 'react';
 import { LifeRing } from '@gravity-ui/icons';
 import { Button } from '@/components/ui/button';
-import { buildReport, getReporting, setReporting, SUPPORT_EMAIL } from '@/lib/error-log';
+import { getReporting, sendReport, setReporting } from '@/lib/error-log';
 
 // Error reporting UI for settings: the report button and the automatic sending switch (on by default).
 // Same file in instagram-gist, jev-model-router and
 // brand-digest-extension (change all three), so it carries its own zh/en text.
+// instagram-gist is ahead: the button sends the log instead of emailing it. Bring the other two up to it.
 // lang: the app's own language setting, if it has one; without it, the browser language decides.
 const TEXT = {
-  zh: { label: '回報問題', done: `已複製診斷資料，寄到 ${SUPPORT_EMAIL}`, subject: '問題回報', auto: '自動傳送錯誤報告' },
-  en: { label: 'Report a problem', done: `Report copied. Send it to ${SUPPORT_EMAIL}`, subject: 'Problem report', auto: 'Send error reports automatically' },
+  zh: { label: '回報問題', sent: '已送出，謝謝回報', failed: '沒送出，請檢查網路後再試', auto: '自動傳送錯誤報告' },
+  en: { label: 'Report a problem', sent: 'Sent. Thank you', failed: 'Not sent. Check the connection and try again', auto: 'Send error reports automatically' },
 };
 const browserLang = () => (navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en');
 
 export function ReportProblem({ size = 'default', lang }: { size?: 'default' | 'sm'; lang?: 'zh' | 'en' }) {
   const text = TEXT[lang ?? browserLang()];
-  const [done, setDone] = useState(false);
+  const [result, setResult] = useState<'sent' | 'failed' | null>(null);
   const [auto, setAuto] = useState<boolean | null>(null);
   useEffect(() => { getReporting().then((c) => setAuto(c !== 'off')); }, []);
   const report = async () => {
-    const body = await buildReport();
-    await navigator.clipboard.writeText(body).catch(() => {});
-    // ponytail: mailto bodies over ~2000 characters get cut by some mail apps; the clipboard has the full report.
-    const mail = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`${document.title} ${text.subject}`)}&body=${encodeURIComponent(body.slice(0, 1800))}`;
-    Object.assign(document.createElement('a'), { href: mail }).click();
-    setDone(true);
-    setTimeout(() => setDone(false), 8000);
+    setResult((await sendReport()) ? 'sent' : 'failed');
+    setTimeout(() => setResult(null), 8000);
   };
   return (
     <>
       <Button type="button" variant="outline" size={size} onClick={report} aria-live="polite">
-        <LifeRing />{done ? text.done : text.label}
+        <LifeRing />{result ? text[result] : text.label}
       </Button>
       {auto !== null && (
         <label className="flex items-center gap-2 text-sm text-muted-foreground">

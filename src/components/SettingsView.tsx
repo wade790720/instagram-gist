@@ -109,12 +109,13 @@ function Panel({ title, help, footer, children }: { title: string; help: string;
 function Row({ title, help, field, children }: { title: string; help: string; field?: boolean; children: React.ReactNode }) {
   const Tag = field ? 'label' : 'div';
   return (
-    <Tag className="flex items-center gap-6 border-b px-4 py-3 last:border-b-0 max-sm:flex-col max-sm:items-stretch max-sm:gap-2">
-      <span className="min-w-0 flex-1">
+    <Tag className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b px-4 py-3 last:border-b-0 max-sm:flex-col max-sm:items-stretch">
+      {/* The label keeps room to read; a control too wide for the row wraps below it instead of squeezing it. */}
+      <span className="min-w-56 flex-1">
         <span className="block font-medium">{title}</span>
         <span className="mt-0.5 block text-xs text-text-secondary">{help}</span>
       </span>
-      <div className={cn('shrink-0', field ? 'sm:w-72' : 'flex justify-end')}>{children}</div>
+      <div className={cn('ms-auto shrink-0', field ? 'sm:w-72' : 'flex justify-end')}>{children}</div>
     </Tag>
   );
 }
