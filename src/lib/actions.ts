@@ -44,7 +44,7 @@ export const sync = () => run(async () => {
 
   if (Date.now() - (db.lastSync.following || 0) > DAY) {
     status(t('syncingFollowing'));
-    // ponytail: 40 pages x 50 = 2000 accounts max; raise if someone follows more.
+    // shortcut: IG sends 25 accounts a page, so 40 pages read 1000 at most; raise it for bigger accounts.
     const following = await fromIg<Parameters<typeof Core.slimUser>[0]>('following', [], 40);
     // Less than half the stored list usually means IG cut paging short, not a mass unfollow.
     // Refuse it once; the same short count on the next Sync is accepted as real.
@@ -55,11 +55,13 @@ export const sync = () => run(async () => {
       throw new Notice(t('followingShrank', following.length, db.following.length));
     }
     delete db.shortFollowing;
-    db.following = Core.keepCats(following.map(Core.slimUser), db.following);
-    // ponytail: 40 pages x 50 = 2000 followers read; past that, mutual friends fall back to the private-account signal.
+    // Followers come first: the new list has no mutual flags until they are read, so a failed read must leave db alone.
+    // shortcut: 40 pages x 25 = 1000 followers read; past that, some mutual friends show as not following back.
     status(t('syncingFollowers'));
     const followers = await fromIg<Parameters<typeof Core.slimUser>[0]>('followers', [], 40);
-    Core.markFriends(db.following, new Set(followers.map(u => Core.slimUser(u).id)), db.settings.lang);
+    const fresh = Core.keepCats(following.map(Core.slimUser), db.following);
+    Core.markFriends(fresh, new Set(followers.map(u => Core.slimUser(u).id)), db.settings.lang);
+    db.following = fresh;
     db.lastSync.following = Date.now();
   }
   await save();

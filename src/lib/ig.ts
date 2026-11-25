@@ -49,21 +49,25 @@ async function igTab() {
     await sleep(500);
     tab = await chrome.tabs.get(tab.id!);
   }
+  // A long read runs in a background tab, which Memory Saver may discard midway ("Frame removed", "No tab with id").
+  await chrome.tabs.update(tab.id!, { autoDiscardable: false }).catch(() => {});
   return { id: tab.id!, created };
 }
 
 export async function fromIg<T>(kind: Kind, known: string[], maxPages: number, retry = true): Promise<T[]> {
-  const tab = await igTab();
+  let tab: Awaited<ReturnType<typeof igTab>> | undefined;
   let result: IgResult | undefined;
   try {
+    tab = await igTab();
     [{ result }] = (await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: igFetch, args: [kind, known, maxPages] })) as { result?: IgResult }[];
   } catch (e) {
     // IG sometimes reloads its own page while igFetch runs ("Frame with ID 0 was removed").
     // igTab() waits for the reload to finish; one more try usually works.
-    if (retry && /frame/i.test((e as Error).message)) return fromIg(kind, known, maxPages, false);
+    if (retry && /frame|no tab/i.test((e as Error).message)) return fromIg(kind, known, maxPages, false);
     throw e;
   } finally {
-    if (tab.created) chrome.tabs.remove(tab.id).catch(() => {});
+    if (tab?.created) chrome.tabs.remove(tab.id).catch(() => {});
+    else if (tab) chrome.tabs.update(tab.id, { autoDiscardable: true }).catch(() => {});
   }
   // Chrome has no InjectionResult.error: if igFetch throws, result is just null.
   if (!result) throw new Error(t('igFailed'));
