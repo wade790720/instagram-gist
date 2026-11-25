@@ -1,15 +1,19 @@
 // Chrome Web Store screenshots, 1280x800, from the dev preview with its sample data (src/dev/mock.ts).
-//   node scripts/store-shots.mjs [out-dir]        (default .local/store-shots)
-// Writes zh-1.png … zh-5.png and en-1.png … en-5.png: one highlight each, the app inside the store frame.
+//   node scripts/store-shots.mjs [out-dir]        (default: the next free ../store-assets/<repo>/vN)
+// Writes tw/screenshot-1.png … 5 and en/screenshot-1.png … 5: one highlight each, the app inside the store frame.
+// Never writes into a folder that exists, so earlier versions stay as they were.
 // Drives the installed Chrome over the DevTools protocol, so it needs no extra npm package. Set CHROME to override its path.
 import { spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const ROOT = resolve(import.meta.dirname, '..');
-const OUT = resolve(process.argv[2] ?? join(ROOT, '.local/store-shots'));
+const ASSETS = resolve(ROOT, '../store-assets', basename(ROOT));
+const nextVersion = () => { let n = 1; while (existsSync(join(ASSETS, `v${n}`))) n++; return join(ASSETS, `v${n}`); };
+const OUT = resolve(process.argv[2] ?? nextVersion());
+if (existsSync(OUT)) throw new Error(`${OUT} already exists; pick a new folder so the old shots are kept`);
 const CHROME = process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const PORT = 5189, DEBUG = 9333;
 const APP = `http://localhost:${PORT}/app.html`;
@@ -92,7 +96,9 @@ try {
         orb: pathToFileURL(join(ROOT, 'public/icons/icon-128.png')).href,
         shot: pathToFileURL(inner).href,
       }).toString();
-      const file = join(OUT, `${lang}-${i + 1}.png`);
+      const dir = join(OUT, lang === 'zh' ? 'tw' : 'en');
+      mkdirSync(dir, { recursive: true });
+      const file = join(dir, `screenshot-${i + 1}.png`);
       await shot(frame.href, file, { ready: `[...document.images].every(i => i.complete && i.naturalWidth)` });
       console.log('saved', file);
     }
